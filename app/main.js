@@ -47,16 +47,16 @@
   var LOOK_VALUES = { bg: ['dark', 'light', 'photo'], layout: ['list', 'dock'], apps: ['icons', 'both', 'text'], font: Object.keys(FONTS).filter(function (id) { return id === 'manrope' || PRIVATE_FONTS.indexOf(id) >= 0; }), controls: ['icons', 'both', 'text'], focus: ['type', 'glass'], material: ['soft', 'frost', 'tint'] };
   var LOOK_NAMES = { bg: 'Background', layout: 'Layout', apps: 'Apps', font: 'Font', controls: 'Home controls', focus: 'Focus', material: 'Material' };
   var VALUE_NAMES = { dark: 'Dark', light: 'Light', photo: 'Photo', list: 'List', dock: 'Dock', type: 'Type', glass: 'Glass', soft: 'Soft', frost: 'Frost', tint: 'Clear tint', icons: 'Icons', both: 'Icons and text', text: 'Text' };
-  var UTIL = { art: ['Art Mode', 'art'], apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'], ha: ['Home', 'home'] };
+  var UTIL = { art: ['Art Mode', 'art'], apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'], ha: ['Lights', 'bulb'] };
   var MSG = {
     leave: { title: 'Leave Home?', line: 'Open Samsung Home?', note: '', actions: [['stay', 'Stay'], ['samsung', 'Samsung Home']] }
   };
   var HA_ROWS = [
-    { label: 'Lights', on: 'lightsOn', off: 'lightsOff' },
     { label: 'Jellyfin light sync', on: 'jellyfinSyncOn', off: 'jellyfinSyncOff' }
   ];
   var SVG = {
     art: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.8" r="1.5"/><path d="m4.5 17.5 4.5-4.5 3 3 2.5-2.5 5 5"/>',
+    bulb: '<path d="M12 3.5a6.5 6.5 0 0 0-3.8 11.8c.7.5 1.3 1.3 1.3 2.3v.4h5v-.4c0-1 .6-1.8 1.3-2.3A6.5 6.5 0 0 0 12 3.5Z"/><path d="M9.8 20.3h4.4M10.3 22h3.4"/>',
     apps: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>',
     arrange: '<path d="M4 8.5h14M15 5.5l3 3-3 3M20 15.5H6M9 12.5l-3 3 3 3"/>',
     settings: '<path d="m9 3-.6 2.4-2 1.2L4 6l-2 3.5L3.8 11v2L2 14.5 4 18l2.4-.6 2 1.2L9 21h6l.6-2.4 2-1.2 2.4.6 2-3.5-1.8-1.5v-2L22 9.5 20 6l-2.4.6-2-1.2L15 3Z"/><circle cx="12" cy="12" r="3.2"/>',
@@ -80,6 +80,7 @@
     sel: null, selIdx: 0, lastUtil: 0, appsFocus: null, settingsFocus: 'background', appearanceFocus: 'bg', detailFocus: {},
     undo: [], removedAt: {}, note: null, err: null,
     writes: 0, failed: 0, log: [], logN: 0, lastLaunch: null, press: null,
+    haOn: false, haStatus: '',
     wallShown: null, wallPending: null, wallError: null,
     shown: null, pending: null, lookError: null, bundleKey: null, previewBundle: null, reflow: false, fontSwitch: false
   };
@@ -503,8 +504,19 @@
   function utilAction(u) {
     if (u === 'art') perform('Art Mode', FrameDevice.art);
     else if (u === 'apps') openApps();
-    else if (u === 'ha') openHA();
+    else if (u === 'ha') haToggle();
     else openSettings();
+  }
+  function haToggle() {
+    if (S.haStatus === 'sending') return;
+    var action = S.haOn ? 'lightsOff' : 'lightsOn';
+    S.haStatus = 'sending'; render();
+    HomeAssistant.fire(action, function (err) {
+      if (!err) S.haOn = !S.haOn;
+      S.haStatus = err ? 'failed' : 'done';
+      render();
+      setTimeout(function () { S.haStatus = ''; render(); }, 2000);
+    });
   }
   function openHA() { push({ id: 'ha', f: { row: 0, col: 0 }, status: {} }); }
   function addAppsRoute() { openEditor('home'); }
@@ -820,13 +832,14 @@
   /* ---------- Settings, Layout and messages ---------- */
   function mode() { for (var i = 0; i < MODES.length; i++) if (MODES[i].id === S.c.mode) return MODES[i]; return MODES[0]; }
   function settingsRows() {
-    var n = S.c.home.length;
-    return [{ id: 'background', label: 'Background', value: S.c.bg === 'photo' ? wall(S.c.wall).name : VALUE_NAMES[S.c.bg] },
+    var n = S.c.home.length, rows = [{ id: 'background', label: 'Background', value: S.c.bg === 'photo' ? wall(S.c.wall).name : VALUE_NAMES[S.c.bg] },
       { id: 'layout', label: 'Layout', value: VALUE_NAMES[S.c.layout] },
       { id: 'typography', label: 'Typography', value: FONTS[S.c.font].name },
       { id: 'focus', label: 'Focus', value: VALUE_NAMES[S.c.focus] + (materialApplies() ? ', ' + VALUE_NAMES[S.c.material] : '') },
-      { id: 'editor', label: 'Apps on Home', value: n + (n === 1 ? ' app' : ' apps') },
-      { id: 'samsung', label: 'Samsung', value: 'Home and TV settings' }];
+      { id: 'editor', label: 'Apps on Home', value: n + (n === 1 ? ' app' : ' apps') }];
+    if (window.HomeAssistant && HomeAssistant.configured()) rows.push({ id: 'ha', label: 'Home Assistant', value: 'Jellyfin light sync' });
+    rows.push({ id: 'samsung', label: 'Samsung', value: 'Home and TV settings' });
+    return rows;
   }
   function settingsIds() { return settingsRows().map(function (r) { return r.id; }); }
   V.settings = {
@@ -844,6 +857,7 @@
   };
   function settingsOk(id) {
     if (id === 'editor') openEditor('settings');
+    else if (id === 'ha') openHA();
     else openAppearance(id);
   }
   var DETAIL_NAMES = { background: 'Background', layout: 'Layout', typography: 'Typography', focus: 'Focus', rotation: 'Rotation', samsung: 'Samsung' };
@@ -1107,11 +1121,18 @@
   function utilBtn(z, i, action, inner, extra, name) {
     return '<button type="button" tabindex="-1" class="u' + (extra || '') + '" data-z="' + z + '" data-i="' + i + '" data-action="' + action + '" aria-label="' + esc(name) + '"><span class="u-content">' + inner + '</span></button>';
   }
+  function haLabel() {
+    return S.haStatus === 'sending' ? 'Sending…' : S.haStatus === 'done' ? 'Done' : S.haStatus === 'failed' ? 'Couldn’t reach Home Assistant' : UTIL.ha[0];
+  }
   function renderUtils(hs) {
     var html = '', style = hs.mode === 'arrange' && S.c.controls !== 'text' ? 'both' : S.c.controls;
     var iconsOnly = style === 'icons', U = utils(), focused = null;
     utilsEl.className = 'utils quiet-utils is-' + style + (hs.zone === 'util' || hs.zone === 'ctl' ? ' is-awake' : '');
-    U.forEach(function (u, i) { html += utilBtn('util', i, 'util.' + u, icon(UTIL[u][1], '', true) + '<span class="u-label">' + UTIL[u][0] + '</span>', '', UTIL[u][0]); });
+    U.forEach(function (u, i) {
+      var label = u === 'ha' ? haLabel() : UTIL[u][0];
+      var extra = u === 'ha' ? (S.haOn ? ' is-on' : '') + (S.haStatus === 'sending' ? ' is-busy' : '') + (S.haStatus === 'failed' ? ' is-failed' : '') : '';
+      html += utilBtn('util', i, 'util.' + u, icon(UTIL[u][1], '', true) + '<span class="u-label">' + esc(label) + '</span>', extra, UTIL[u][0]);
+    });
     setHTML(utilsEl, html);
     Array.prototype.forEach.call(utilsEl.querySelectorAll('.u'), function (b) {
       var z = b.getAttribute('data-z'), focus = hs.zone === z && hs.u === Number(b.getAttribute('data-i'));
@@ -1549,7 +1570,7 @@
       var m = messageContent(t);
       return '<h2 class="msg-title">' + esc(m.title) + '</h2><p class="msg-line">' + esc(m.line) + '</p><p class="msg-note">' + esc(m.note) + '</p><div class="msg-acts" data-slot="acts"></div>';
     },
-    ha: function () { return '<h2 class="msg-title">Home</h2><div class="ha-rows" data-slot="rows"></div>'; }
+    ha: function () { return '<h2 class="msg-title">Home Assistant</h2><div class="ha-rows" data-slot="rows"></div>'; }
   };
   function gridTileHtml(id) {
     var a = app(id), state = onHome(id) ? badge(true) + '<span>On Home</span>' : '';
@@ -1637,10 +1658,11 @@
       el.otherAfter.className = 'row-cue editor-after' + (afterRows ? ' is-on' : '');
     },
     settings: function (t, el) {
-      var html = '';
-      settingsRows().forEach(function (r) {
+      var html = '', rows = settingsRows();
+      rows.forEach(function (r) {
         html += '<button type="button" tabindex="-1" class="settings-group' + (r.id === t.f.id ? ' is-focus' : '') + '" data-z="row" data-i="0" data-id="' + r.id + '" data-action="settings.' + (r.id === 'editor' ? 'editor' : 'group.' + r.id) + '"><span class="settings-group-copy"><span class="settings-group-name">' + esc(r.label) + '</span><span class="settings-group-value">' + esc(r.value) + '</span></span>' + icon('right') + '</button>';
       });
+      el.list.className = 'settings-overview' + (rows.length > 6 ? ' is-dense' : '');
       setHTML(el.list, html);
     },
     message: function (t, el) {
