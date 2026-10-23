@@ -28,8 +28,6 @@ for filename in ['index.html']:
     for reference in re.findall(pattern, source):
         if ':' in reference or reference.startswith('$'):
             continue
-        if reference == 'ha-config.js':
-            continue  # Private, gitignored and optional; a missing file must not break the app.
         assert (app / reference).is_file(), 'Missing bundled resource: ' + reference
         if filename.endswith('.js'):
             assert reference.startswith(('./', '../')), 'Module imports must be relative paths'
@@ -52,4 +50,16 @@ for icon in ['netflix', 'youtube', 'primevideo', 'spotify', 'jellyfin', 'bbc', '
 # Home Assistant: the example config is a template only and must stay out of the packaged widget.
 assert (app / 'ha-config.example.js').is_file(), 'Missing app/ha-config.example.js template'
 assert not is_runtime_source('ha-config.example.js'), 'ha-config.example.js must be excluded from the packaged widget'
+# Wiring is live: ha-config.js is now required (caught above via the index.html reference scan,
+# since it's no longer exempted), config.xml must declare internet + a scoped (non-wildcard)
+# access origin, and it must match ha-config.js's own base - not some other host.
+manifest_text = (app / 'config.xml').read_text()
+assert 'http://tizen.org/privilege/internet' in manifest_text, 'Missing internet privilege for Home Assistant'
+access_match = re.search(r'<access\s+origin="([^"]+)"\s+subdomains="(true|false)"', manifest_text)
+assert access_match, 'Missing scoped <access> entry for Home Assistant'
+assert access_match.group(1) not in ('*', ''), 'Access origin must be scoped, not wildcarded'
+assert access_match.group(2) == 'false', 'Access origin should not blanket-allow subdomains'
+ha_config_text = (app / 'ha-config.js').read_text()
+base_match = re.search(r'base\s*:\s*[\'"]([^\'"]+)[\'"]', ha_config_text)
+assert base_match and base_match.group(1).startswith(access_match.group(1)), 'config.xml access origin does not match ha-config.js base'
 print('Widget identity, version and bundled resources are valid.')

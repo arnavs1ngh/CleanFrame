@@ -111,7 +111,10 @@ async function page(options = {}) {
   current = await preview.browser.newPage({ viewport: { width: 1920, height: 1080 } });
   const owner = current;
   current.setDefaultTimeout(10000);
-  // ha-config.js is private and gitignored; no test here supplies a real one, so its 404 is expected everywhere.
+  // ha-config.js is private, gitignored and machine-specific - a real one may or may not exist
+  // on disk here. Tests must not depend on that: always serve it as missing, and let the `ha`
+  // option (via installHarness) inject a fake HA_CONFIG for tests that need it configured.
+  await current.route('**/ha-config.js', route => route.fulfill({ status: 404, body: '' }));
   const expected = ['ha-config.js'];
   current.__expectedFailures = expected;
   current.on('pageerror', error => report.pageErrors.push({ section, error: error.message }));
