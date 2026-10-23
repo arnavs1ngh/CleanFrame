@@ -3,6 +3,9 @@ from pathlib import Path
 import json
 import xml.etree.ElementTree as XML
 import re
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from font_assets import is_runtime_source
 
 root = Path(__file__).resolve().parents[1]
 app = root / 'app'
@@ -10,8 +13,8 @@ manifest = XML.parse(app / 'config.xml').getroot()
 ns = {'w': 'http://www.w3.org/ns/widgets', 't': 'http://tizen.org/ns/widgets'}
 identity = manifest.find('t:application', ns)
 assert identity is not None, 'Missing application identity'
-assert identity.get('package') == 'nClrkHome1', 'Keep the installed package identity stable'
-assert identity.get('id') == 'nClrkHome1.FrameHome', 'Keep the installed application ID stable'
+assert identity.get('package') == 'MaytonHome', 'Keep the installed package identity stable'
+assert identity.get('id') == 'MaytonHome.Home', 'Keep the installed application ID stable'
 assert manifest.get('version') == json.loads((root / 'package.json').read_text())['version'], 'Manifest/package versions differ'
 for tag in ['content', 'icon']:
     node = manifest.find('w:' + tag, ns)
@@ -25,6 +28,8 @@ for filename in ['index.html']:
     for reference in re.findall(pattern, source):
         if ':' in reference or reference.startswith('$'):
             continue
+        if reference == 'ha-config.js':
+            continue  # Private, gitignored and optional; a missing file must not break the app.
         assert (app / reference).is_file(), 'Missing bundled resource: ' + reference
         if filename.endswith('.js'):
             assert reference.startswith(('./', '../')), 'Module imports must be relative paths'
@@ -41,6 +46,20 @@ for wall in walls:
     for suffix in ['study-soft', 'field-blur', 'field-frost', 'field-clear']:
         assert (app / ('assets/materials/' + wall_id + '-' + suffix + '.jpg')).is_file(), 'Missing registered material: ' + wall_id + '/' + suffix
     assert (app / ('assets/wallpapers/' + wall_id + '-panel.jpg')).is_file(), 'Missing panel backdrop: ' + wall_id
-for icon in ['stremio', 'netflix', 'disneyplus', 'youtube', 'appletv', 'primevideo', 'abciview', 'sbs', 'applemusic', 'art', 'apps', 'settings']:
+for icon in ['netflix', 'youtube', 'primevideo', 'spotify', 'jellyfin', 'bbc', 'itvx', 'channel4', 'art', 'apps', 'settings']:
     assert (app / ('assets/icons/' + icon + '.svg')).is_file(), 'Missing icon: ' + icon
+
+# Home Assistant: the example config is a template only, and the preview-only mock must
+# never reach app/, so neither can end up in a packaged widget.
+assert (app / 'ha-config.example.js').is_file(), 'Missing app/ha-config.example.js template'
+assert not is_runtime_source('ha-config.example.js'), 'ha-config.example.js must be excluded from the packaged widget'
+MOCK_MARKERS = ['HA-PREVIEW-MOCK', 'HA mock']
+for source in app.rglob('*'):
+    if not source.is_file() or not is_runtime_source(source.relative_to(app).as_posix()):
+        continue
+    if source.suffix not in ('.js', '.html', '.css'):
+        continue
+    text = source.read_text(errors='ignore')
+    for marker in MOCK_MARKERS:
+        assert marker not in text, 'Preview-only mock marker found in packaged source: ' + str(source.relative_to(app)) + ' (' + marker + ')'
 print('Widget identity, version and bundled resources are valid.')
