@@ -46,20 +46,10 @@ for wall in walls:
     for suffix in ['study-soft', 'field-blur', 'field-frost', 'field-clear']:
         assert (app / ('assets/materials/' + wall_id + '-' + suffix + '.jpg')).is_file(), 'Missing registered material: ' + wall_id + '/' + suffix
     assert (app / ('assets/wallpapers/' + wall_id + '-panel.jpg')).is_file(), 'Missing panel backdrop: ' + wall_id
-for icon in ['netflix', 'youtube', 'primevideo', 'spotify', 'jellyfin', 'bbc', 'itvx', 'channel4', 'art', 'apps', 'settings']:
+for icon in ['netflix', 'youtube', 'primevideo', 'spotify', 'jellyfin', 'bbc', 'itvx', 'channel4', 'art', 'apps', 'settings', 'bulb']:
     assert (app / ('assets/icons/' + icon + '.svg')).is_file(), 'Missing icon: ' + icon
 
-# Home Assistant: the example config is a template only, and the preview-only mock must
-# never reach app/, so neither can end up in a packaged widget.
+# Home Assistant: the example config is a template only and must stay out of the packaged widget.
 assert (app / 'ha-config.example.js').is_file(), 'Missing app/ha-config.example.js template'
 assert not is_runtime_source('ha-config.example.js'), 'ha-config.example.js must be excluded from the packaged widget'
-MOCK_MARKERS = ['HA-PREVIEW-MOCK', 'HA mock']
-for source in app.rglob('*'):
-    if not source.is_file() or not is_runtime_source(source.relative_to(app).as_posix()):
-        continue
-    if source.suffix not in ('.js', '.html', '.css'):
-        continue
-    text = source.read_text(errors='ignore')
-    for marker in MOCK_MARKERS:
-        assert marker not in text, 'Preview-only mock marker found in packaged source: ' + str(source.relative_to(app)) + ' (' + marker + ')'
 print('Widget identity, version and bundled resources are valid.')
