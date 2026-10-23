@@ -16,5 +16,23 @@
     "source": "https://github.com/simple-icons/simple-icons/blob/develop/icons/tubi.svg",
     "licence": "CC0-1.0",
     "note": "Shape unchanged; white fill for launcher."
+  },
+  {
+    "icon": "jellyfin",
+    "source": "https://github.com/simple-icons/simple-icons/blob/30053a0f492fd192740ad001031b3091be060986/icons/jellyfin.svg",
+    "licence": "CC0-1.0",
+    "note": "Shape unchanged; white fill for launcher."
+  },
+  {
+    "icon": "itvx",
+    "source": "https://github.com/simple-icons/simple-icons/blob/30053a0f492fd192740ad001031b3091be060986/icons/itvx.svg",
+    "licence": "CC0-1.0",
+    "note": "Shape unchanged; white fill for launcher."
+  },
+  {
+    "icon": "channel4",
+    "source": "https://github.com/simple-icons/simple-icons/blob/30053a0f492fd192740ad001031b3091be060986/icons/channel4.svg",
+    "licence": "CC0-1.0",
+    "note": "Shape unchanged; white fill for launcher."
   }
 ]
