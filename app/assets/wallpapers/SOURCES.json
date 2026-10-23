@@ -1,5 +1,15 @@
 [
   {
+    "id": "family",
+    "name": "Dinner out",
+    "src": "assets/wallpapers/family.jpg",
+    "thumb": "assets/wallpapers/family-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "credit": "Personal photo",
+    "source": ""
+  },
+  {
     "id": "misty",
     "name": "Misty coast",
     "src": "assets/wallpapers/misty.jpg",

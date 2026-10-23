@@ -1,6 +1,21 @@
 /* Bundled gallery and offline appearance parameters. */
 window.CleanFrameWallpapers = [
   {
+    "id": "family",
+    "name": "Dinner out",
+    "src": "assets/wallpapers/family.jpg",
+    "thumb": "assets/wallpapers/family-thumb.jpg",
+    "tone": "dark",
+    "ut": {
+      "tr": "mist",
+      "br": "mist"
+    },
+    "frostVeil": 0.3,
+    "listColumn": 0,
+    "dockQuiet": false,
+    "clockMist": false
+  },
+  {
     "id": "misty",
     "name": "Misty coast",
     "src": "assets/wallpapers/misty.jpg",
