@@ -75,6 +75,12 @@ for name in ['app/assets/fonts/geist/OFL.txt', 'app/assets/fonts/newsreader/OFL.
     if not (ROOT / name).is_file():
         findings.append('Missing public font licence: ' + name)
 
+# A wallpaper without a real licensed source is personal content (e.g. an owner's own
+# photo of real people) and must never ship in a public export.
+for wall in json.loads((ROOT / 'app/assets/wallpapers/SOURCES.json').read_text()):
+    if not wall.get('source'):
+        findings.append('Personal/non-redistributable wallpaper must not be in a public release: ' + wall['id'])
+
 if findings:
     raise SystemExit('\n'.join(sorted(set(findings))[:20]) + '\nTotal findings: ' + str(len(set(findings))))
 print('Public-source checks passed for ' + str(len(candidates)) + ' candidate files and reachable Git paths.')

@@ -12,6 +12,8 @@ Paid Pangram fonts, signing keys, account tokens, local device addresses, recove
 
 Each of the fifteen wallpaper pages was checked for author and Unsplash licence on 20 October 2026; see [asset sources](asset-sources.md). ABC and SBS icons now use documented MIT Custom Brand Icons sources. Font and icon licence texts are retained. Original code uses MIT; third-party assets keep their own terms in [third-party notices](../THIRD_PARTY_NOTICES.md).
 
+An owner-supplied personal wallpaper (`family`, added after this review) is not Unsplash-licensed and must not appear in any future public release. `scripts/check-public.py` now fails if a wallpaper entry has no `source` - that is the signal for personal, non-redistributable photo content. Resolve that finding (remove the entry from a public export's copy of `SOURCES.json`/`catalog.js`, or build a proper exclusion mechanism) before re-running the release review above.
+
 ## Validation
 
 A separate clean snapshot contains 193 files, about 17 MB, without private setup. It passed `npm ci`, source/resource checks, public-source and font-hash checks, all 344 Chromium acceptance checks, and an unsigned public-font export. The export contains exactly three public font binaries. `npm audit` reported zero known vulnerabilities. The retained material and icon-metric generators also passed local smoke checks. These results do not establish physical-TV behaviour.

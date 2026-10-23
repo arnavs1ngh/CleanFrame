@@ -4,7 +4,7 @@ The app includes all runtime JPEGs, thumbnails, registered material fields, publ
 
 ## Current List and Dock materials
 
-The 0.6 runtime uses fifteen photographs. Each has a background, a thumbnail, a small panel backdrop and four full-stage material JPEGs. The runtime never generates blur or reads photo pixels. Generate selected materials with:
+The 0.6 runtime uses fifteen Unsplash-licensed photographs, plus any owner-supplied personal photos added for a specific installation (see `docs/public-release.md` before a public export). Each has a background, a thumbnail, a small panel backdrop and four full-stage material JPEGs. The runtime never generates blur or reads photo pixels. Generate selected materials with:
 
 ```sh
 node scripts/build-materials.mjs summit,goldcoast,sydney,amber,mint,alpine
