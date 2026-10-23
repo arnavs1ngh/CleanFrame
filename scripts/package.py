@@ -42,7 +42,7 @@ unsigned = dist / 'CleanFrame-unsigned.wgt'
 write_widget_archive(unsigned)
 signed_dir = dist / 'signed'
 signed_dir.mkdir(exist_ok=True)
-command = [str(CLI), 'package', '-t', 'wgt', '-s', 'FrameHome', '-o', str(signed_dir), '--', str(unsigned)]
+command = [str(CLI), 'package', '-t', 'wgt', '-s', 'Mayton', '-o', str(signed_dir), '--', str(unsigned)]
 pid, terminal = pty.fork()
 if pid == 0:
     os.execv(command[0], command)
