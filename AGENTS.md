@@ -8,6 +8,8 @@ Run `npm run check` for app changes. For interaction changes, run the browser pr
 
 Browser/repository tasks do not authorise device access. Read `docs/tv-status.md` before compatibility claims and `docs/agent-tv-setup-guide.md` before a new TV setup. An explicit device task is required even for queries that stage a helper. Announce any installation, app launch or restart; confirm visible results with the owner. Treat native Home/startup writes as a separate task with explicit authority and an exact-value recovery baseline.
 
+Read `docs/home-assistant.md` before finishing the Home Assistant wiring (`app/ha-config.js`, `config.xml` privileges/`<access>`, the packaging check, CORS) or making further Home Assistant UI changes. It records what's built, what's untested, and what's explicitly deferred.
+
 On the maintainer's TV, preserve the stable package/application identity, author certificate and existing native Home assignment. For an independent user's installation, generate their own identity and certificates, and update manifest checks, launch/self-filter IDs and helper targets consistently. `scripts/package.py`, `scripts/tv.py` and `scripts/native-home/` contain reference-machine assumptions; they are not an unattended installer.
 
 Keep proprietary fonts, signing keys, passwords, device identifiers, addresses, SDKs, recovery values and generated packages in ignored `.local/` or `dist/`. Never commit paid font binaries or publish a private-font widget. Public-code licensing does not replace the terms in `THIRD_PARTY_NOTICES.md`.
