@@ -4,16 +4,15 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { openPreview, root } from './browser.mjs';
 
 const KEY = 'cleanframe.home.v1';
-const PRIMARY = ['stremio', 'netflix', 'disneyplus', 'youtube', 'appletv', 'primevideo', 'abciview', 'sbs', 'applemusic'];
-const IDS = ['IkWsFHtOY9.Stremio', 'org.tizen.netflix-app', 'MCmYXNxgcu.DisneyPlus', '9Ur5IzDKqV.TizenYouTube', 'com.samsung.tv.aria-video', 'org.tizen.primevideo', 'mWK87Xghap.ABCiview', 'OyE7OuxlUi.SBSOnDemand', 'org.tizen.apple.apple-music'];
-const NAMES = ['Stremio', 'Netflix', 'Disney+', 'YouTube', 'Apple TV', 'Prime Video', 'ABC iview', 'SBS On Demand', 'Apple Music'];
-const EXTRA = 'AbCdEf1234.FamilyApp', SPOTIFY = 'rJeHak5zRg.Spotify';
+const PRIMARY = ['jellyfin', 'netflix', 'bbc', 'itvx', 'youtube', 'primevideo', 'spotify', 'channel4'];
+const IDS = ['rTn6ClEurC.Jellyfin', 'org.tizen.netflix-app', 'DqEoaplKlw.bbchybrid', 'OEvCiupaFR.ITVHub', '9Ur5IzDKqV.TizenYouTube', 'org.tizen.primevideo', 'rJeHak5zRg.Spotify', 'OCaxbgg9v6.chfourctv'];
+const NAMES = ['Jellyfin', 'Netflix', 'BBC iPlayer', 'ITVX', 'YouTube', 'Prime Video', 'Spotify', 'Channel 4'];
+const EXTRA = 'AbCdEf1234.FamilyApp', TUBI = '3KA0pm7a7V.TubiTV';
 const UNSAFE_NAME = 'Family <img src=x onerror="window.__catalogXss=1"> & TV';
 const CATALOG = IDS.map((id, i) => ({ id, name: NAMES[i], show: true, iconPath: '' })).concat([
   { id: EXTRA, name: UNSAFE_NAME, show: true, iconPath: '' },
-  { id: SPOTIFY, name: 'Spotify', show: true, iconPath: '' },
-  { id: '5b8c3eb16b.BeamCTVDev', name: 'HBO Max', show: true, iconPath: '' },
-  { id: 'nClrkHome1.FrameHome', name: 'CleanFrame', show: true },
+  { id: TUBI, name: 'Tubi', show: true, iconPath: '' },
+  { id: 'MaytonHome.Home', name: 'CleanFrame', show: true },
   { id: 'AbCdEf1234.worker', name: 'Background worker', show: true },
   { id: 'com.samsung.tv.cobalt-yt', name: 'YouTube', show: true }
 ]);
@@ -42,7 +41,7 @@ async function run(name, fn) {
 async function closePage() { if (current) { current.__closing = true; await current.close(); current = null; } }
 
 // Production still calls its unmodified device.js adapter.
-function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure, noFontAPI, storageFailure }) {
+function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure, noFontAPI, storageFailure, ha }) {
   if (!sessionStorage.getItem('__cleanframe_seeded')) {
     if (seed !== undefined) localStorage.setItem('cleanframe.home.v1', typeof seed === 'string' ? seed : JSON.stringify(seed));
     if (legacy !== undefined) localStorage.setItem('cleanframe.shore.v1', typeof legacy === 'string' ? legacy : JSON.stringify(legacy));
@@ -63,6 +62,28 @@ function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure,
     document.dispatchEvent(new Event('visibilitychange'));
   };
   if (noFontAPI) Object.defineProperty(document, 'fonts', { configurable: true, value: undefined });
+  // Home Assistant: fake HA_CONFIG and XMLHttpRequest, installed before ha-config.js/ha.js load.
+  // ha omitted entirely -> no HA_CONFIG at all, exercising the "hidden without config" path for real.
+  if (ha) {
+    window.HA_CONFIG = { base: 'http://qa.local:8123', actions: {
+      lightsOn: 'qa-lights-on', lightsOff: 'qa-lights-off',
+      jellyfinSyncOn: 'qa-jellyfin-on', jellyfinSyncOff: 'qa-jellyfin-off'
+    } };
+    window.__haCalls = [];
+    function FakeXHR() {}
+    FakeXHR.prototype.open = function (method, url) { this._url = url; };
+    FakeXHR.prototype.setRequestHeader = function () {};
+    FakeXHR.prototype.send = function () {
+      const self = this;
+      window.__haCalls.push(this._url);
+      if (ha === 'slow') return; // never resolves; ha.js's own 4s bounded() timeout wins
+      setTimeout(() => {
+        if (ha === 'fail') { self.status = 0; if (self.onerror) self.onerror(); }
+        else { self.status = 200; if (self.onload) self.onload(); }
+      }, 200); // slow enough that a test can reliably observe the "sending" state first
+    };
+    window.XMLHttpRequest = FakeXHR;
+  }
   if (!mock) return;
   window.__tv = { catalog, catalogFailure: !!catalogFailure, launchFailure: false, holdCatalog: false, pending: [], calls: [], catalogCalls: 0 };
   window.tizen = {
@@ -90,7 +111,8 @@ async function page(options = {}) {
   current = await preview.browser.newPage({ viewport: { width: 1920, height: 1080 } });
   const owner = current;
   current.setDefaultTimeout(10000);
-  const expected = [];
+  // ha-config.js is private and gitignored; no test here supplies a real one, so its 404 is expected everywhere.
+  const expected = ['ha-config.js'];
   current.__expectedFailures = expected;
   current.on('pageerror', error => report.pageErrors.push({ section, error: error.message }));
   current.on('response', response => { if (response.status() >= 400 && !expected.some(s => response.url().includes(s))) report.pageErrors.push({ section, status: response.status(), url: response.url() }); });
@@ -237,23 +259,19 @@ try {
   await run('Real catalogue and native launch boundary', async () => {
     await page(); await library();
     const names = await current.locator('[data-action^="apps.open."] .label').allTextContents();
-    check('Consumer catalogue excludes services, self and duplicate YouTube', names.length === 12 && names.filter(n => n === 'YouTube').length === 1 && !names.includes('CleanFrame') && !names.includes('Background worker'), names);
+    check('Consumer catalogue excludes services, self and duplicate YouTube', names.length === 10 && names.filter(n => n === 'YouTube').length === 1 && !names.includes('CleanFrame') && !names.includes('Background worker'), names);
     check('Installed names stay text, including HTML punctuation', names.includes(UNSAFE_NAME) && !(await current.evaluate(() => window.__catalogXss)));
-    check('Exploration fixtures do not appear', !names.includes('Plex') && !names.includes('Jellyfin'));
-    await act('apps.open.' + SPOTIFY); await current.waitForFunction(() => __tv.calls.length > 0);
-    check('Extra-brand app launches native ID', (await current.evaluate(() => __tv.calls.at(-1))).id === SPOTIFY);
+    check('Exploration fixtures do not appear', !names.includes('Plex') && !names.includes('Kodi'));
+    await act('apps.open.' + TUBI); await current.waitForFunction(() => __tv.calls.length > 0);
+    check('Extra-brand app launches native ID', (await current.evaluate(() => __tv.calls.at(-1))).id === TUBI);
     await current.evaluate(() => window.dispatchEvent(new Event('focus')));
     await scene('home'); await act('home.app.netflix'); await current.waitForFunction(() => __tv.calls.length === 2);
     check('Primary app keeps verified target', (await current.evaluate(() => __tv.calls.at(-1))).id === IDS[1]);
-    await current.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await act('util.art'); await current.waitForFunction(() => __tv.calls.length === 3);
-    const art = await current.evaluate(() => __tv.calls.at(-1));
-    check('Art Mode uses app-control with fullscreen request', art.method === 'launchAppControl' && art.id === 'org.tizen.art-app' && art.control.data.some(d => d.key === 'mode' && d.value[0] === 'fullscreen'), art);
     await current.evaluate(() => window.dispatchEvent(new Event('focus'))); await group('samsung'); await act('samsung.home');
-    await current.waitForFunction(() => __tv.calls.length === 4);
+    await current.waitForFunction(() => __tv.calls.length === 3);
     check('Samsung escape keeps CSFS target', (await current.evaluate(() => __tv.calls.at(-1))).id === 'com.samsung.tv.csfs');
     await current.evaluate(() => window.dispatchEvent(new Event('focus'))); await group('samsung'); await act('samsung.settings');
-    await current.waitForFunction(() => __tv.calls.length === 5);
+    await current.waitForFunction(() => __tv.calls.length === 4);
     check('TV settings keeps installed target', (await current.evaluate(() => __tv.calls.at(-1))).id === 'com.samsung.tv.coba.setting');
     await current.evaluate(() => { window.dispatchEvent(new Event('focus')); __tv.launchFailure = true; });
     await scene('home'); await act('home.app.netflix'); await current.waitForFunction(() => ShoreQA.where().view === 'message');
@@ -264,7 +282,7 @@ try {
     check('Catalogue failure leaves Home intact', same((await state()).dock, PRIMARY));
     await current.evaluate(() => { __tv.catalogFailure = false; }); await act('apps.retry');
     await current.waitForSelector('[data-action="apps.open.' + EXTRA + '"]');
-    check('Retry displays real installed names', (await current.locator('[data-action^="apps.open."]').count()) === 12);
+    check('Retry displays real installed names', (await current.locator('[data-action^="apps.open."]').count()) === 10);
   });
   await run('Native icon and failed-image fallback', async () => {
     await page({ catalog: CATALOG.map(a => a.id === EXTRA ? { ...a, iconPath: '/home/assets/icons/netflix.svg' } : a) });
@@ -304,8 +322,9 @@ try {
     await act('editor.move.netflix'); await nav('down', 'ok');
     const moved = start.slice(); [moved[1], moved[2]] = [moved[2], moved[1]];
     check('Placed move persists immediately', same((await stored()).dock, moved));
+    await act('editor.add.' + TUBI); check('Ninth app fills Home', (await state()).dock.length === 9 && (await state()).dock.includes(TUBI));
     await act('editor.add.' + EXTRA); check('Nine-app cap prevents addition', (await state()).dock.length === 9 && !(await state()).dock.includes(EXTRA));
-    await remove('stremio'); await act('editor.add.' + EXTRA);
+    await remove(TUBI); await act('editor.add.' + EXTRA);
     check('Native app can be pinned with stable ID', (await stored()).dock.includes(EXTRA) && (await state()).dock.length === 9);
     check('Native pin retains readable metadata for failed discovery', (await stored()).appRecords.some(a => a.id === EXTRA && a.name === UNSAFE_NAME));
     await current.reload(); await ready(); check('Native pin survives reload', (await state()).dock.includes(EXTRA));
@@ -808,7 +827,7 @@ try {
   await run('Physical-key repeats and Back hierarchy', async () => {
     await page(); await editor(); await remove('netflix');
     await current.keyboard.down('Enter'); await current.keyboard.down('Enter');
-    check('Held OK restores once without removing again', (await state()).dock.includes('netflix') && (await state()).dock.length === 9);
+    check('Held OK restores once without removing again', (await state()).dock.includes('netflix') && (await state()).dock.length === 8);
     await current.keyboard.up('Enter');
     await current.keyboard.down('Escape'); await current.keyboard.down('Escape');
     check('Held Back closes one layer only', (await call('where')).view === 'settings' && (await state()).focusAction === 'settings.editor');
@@ -849,6 +868,48 @@ try {
     check('Browser launch honestly requires TV', /TV/.test(await current.locator('#stage').innerText()));
     await nav('back'); await library();
     check('Browser All Apps has no installed fixtures', /TV/.test(await current.locator('#stage').innerText()) && !(await current.locator('[data-action^="apps.open."]').count()));
+  });
+  await run('Home Assistant control', async () => {
+    await page(); // no ha option at all: no HA_CONFIG, nothing to configure the control with
+    const noConfigUtils = await current.locator('.utils .u').allTextContents();
+    check('Home control is absent without configuration', !noConfigUtils.includes('Home'), noConfigUtils);
+    await closePage();
+
+    await page({ ha: 'ok' });
+    const utilNames = await current.locator('.utils .u').allTextContents();
+    check('Home control appears first when configured', utilNames[0] === 'Home', utilNames);
+    await nav('up');
+    check('Home control is focusable from Home', (await call('where')).focus === 'Home');
+    await act('util.ha');
+    check('OK opens the Home Assistant panel', (await call('where')).view === 'ha');
+    const rowNames = await current.locator('.ha-row-name').allTextContents();
+    check('Panel shows both configured rows in order', same(rowNames, ['Lights', 'Jellyfin light sync']), rowNames);
+    await nav('back');
+    check('Back closes the panel and returns focus to the Home control', (await call('where')).view === 'home' && (await call('where')).focus === 'Home');
+
+    await act('util.ha');
+    await act('ha.fire.lightsOn');
+    check('Pressing On shows sending feedback', /Sending/.test(await current.locator('.ha-status').nth(0).textContent()));
+    await act('ha.fire.lightsOn');
+    const callsDuringFlight = await current.evaluate(() => window.__haCalls.length);
+    check('Repeat press while in flight is ignored', callsDuringFlight === 1, callsDuringFlight);
+    await current.waitForFunction(() => (document.querySelectorAll('.ha-status')[0].textContent || '').trim() === 'Done');
+    check('Success settles to Done', true);
+    await current.waitForFunction(() => (document.querySelectorAll('.ha-status')[0].textContent || '').trim() === '', null, { timeout: 3000 });
+    check('Feedback reverts to idle after a couple of seconds', true);
+    await closePage();
+
+    await page({ ha: 'fail' });
+    await act('util.ha'); await act('ha.fire.lightsOff');
+    await current.waitForFunction(() => /reach Home Assistant/.test(document.querySelectorAll('.ha-status')[1]?.textContent || ''), null, { timeout: 3000 });
+    check('Failure shows the Home Assistant error message', true);
+    await closePage();
+
+    await page({ ha: 'slow' });
+    await act('util.ha'); await act('ha.fire.jellyfinSyncOn');
+    check('Slow request stays in sending state before the client timeout', /Sending/.test(await current.locator('.ha-status').nth(2).textContent()));
+    await current.waitForFunction(() => /reach Home Assistant/.test(document.querySelectorAll('.ha-status')[2]?.textContent || ''), null, { timeout: 5000 });
+    check('The 4s client-side timeout produces the same error message', true);
   });
   section = 'Run integrity';
   report.sourceAfter = hashes();
