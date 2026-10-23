@@ -23,6 +23,9 @@ PP*.woff
 PP*.woff2
 *.wgt
 
+# Private Home Assistant config (webhook IDs, LAN address). Copy from ha-config.example.js.
+/app/ha-config.js
+
 # Personal studies, research and draft writing stay local.
 /explorations/
 /docs/research/
