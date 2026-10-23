@@ -14,15 +14,14 @@
   var FULL = 'Home holds nine apps. Remove one first.', LAST = 'Home needs one app';
 
   var PRIMARY_APPS = [
-    { id: 'stremio', name: 'Stremio', mark: true, appId: 'IkWsFHtOY9.Stremio' },
+    { id: 'jellyfin', name: 'Jellyfin', mark: true, appId: 'rTn6ClEurC.Jellyfin' },
     { id: 'netflix', name: 'Netflix', mark: true, appId: 'org.tizen.netflix-app' },
-    { id: 'disneyplus', name: 'Disney+', mark: true, appId: 'MCmYXNxgcu.DisneyPlus' },
+    { id: 'bbc', name: 'BBC iPlayer', mark: true, appId: 'DqEoaplKlw.bbchybrid' },
+    { id: 'itvx', name: 'ITVX', mark: true, appId: 'OEvCiupaFR.ITVHub' },
     { id: 'youtube', name: 'YouTube', mark: true, appId: '9Ur5IzDKqV.TizenYouTube' },
-    { id: 'appletv', name: 'Apple TV', mark: true, appId: 'com.samsung.tv.aria-video' },
     { id: 'primevideo', name: 'Prime Video', mark: true, appId: 'org.tizen.primevideo' },
-    { id: 'abciview', name: 'ABC iview', mark: true, appId: 'mWK87Xghap.ABCiview' },
-    { id: 'sbs', name: 'SBS On Demand', mark: true, appId: 'OyE7OuxlUi.SBSOnDemand' },
-    { id: 'applemusic', name: 'Apple Music', mark: true, appId: 'org.tizen.apple.apple-music' }
+    { id: 'spotify', name: 'Spotify', mark: true, appId: 'rJeHak5zRg.Spotify' },
+    { id: 'channel4', name: 'Channel 4', mark: true, appId: 'OCaxbgg9v6.chfourctv' }
   ];
   var PRIMARY = PRIMARY_APPS.map(function (a) { return a.id; }), APPS = PRIMARY_APPS.slice(), ALPHA = [];
   var WALLS = window.CleanFrameWallpapers || [{ id: 'misty', name: 'Misty coast', tone: 'light', ut: { tr: 'mist', br: 'mist' }, frostVeil: .20 }];
@@ -48,10 +47,14 @@
   var LOOK_VALUES = { bg: ['dark', 'light', 'photo'], layout: ['list', 'dock'], apps: ['icons', 'both', 'text'], font: Object.keys(FONTS).filter(function (id) { return id === 'manrope' || PRIVATE_FONTS.indexOf(id) >= 0; }), controls: ['icons', 'both', 'text'], focus: ['type', 'glass'], material: ['soft', 'frost', 'tint'] };
   var LOOK_NAMES = { bg: 'Background', layout: 'Layout', apps: 'Apps', font: 'Font', controls: 'Home controls', focus: 'Focus', material: 'Material' };
   var VALUE_NAMES = { dark: 'Dark', light: 'Light', photo: 'Photo', list: 'List', dock: 'Dock', type: 'Type', glass: 'Glass', soft: 'Soft', frost: 'Frost', tint: 'Clear tint', icons: 'Icons', both: 'Icons and text', text: 'Text' };
-  var UTIL = { art: ['Art Mode', 'art'], apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'] };
+  var UTIL = { art: ['Art Mode', 'art'], apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'], ha: ['Home', 'home'] };
   var MSG = {
     leave: { title: 'Leave Home?', line: 'Open Samsung Home?', note: '', actions: [['stay', 'Stay'], ['samsung', 'Samsung Home']] }
   };
+  var HA_ROWS = [
+    { label: 'Lights', on: 'lightsOn', off: 'lightsOff' },
+    { label: 'Jellyfin light sync', on: 'jellyfinSyncOn', off: 'jellyfinSyncOff' }
+  ];
   var SVG = {
     art: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.8" r="1.5"/><path d="m4.5 17.5 4.5-4.5 3 3 2.5-2.5 5 5"/>',
     apps: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>',
@@ -491,7 +494,7 @@
   }
 
   /* ---------- Navigation targets ---------- */
-  function utils() { return ['art', 'apps', 'settings']; }
+  function utils() { return window.HomeAssistant && HomeAssistant.configured() ? ['ha', 'apps', 'settings'] : ['apps', 'settings']; }
   /* prev/next run along the apps; out goes to the controls, inn comes back (or to a per-app action). */
   function axes() {
     var v = S.c.layout === 'list';
@@ -500,8 +503,10 @@
   function utilAction(u) {
     if (u === 'art') perform('Art Mode', FrameDevice.art);
     else if (u === 'apps') openApps();
+    else if (u === 'ha') openHA();
     else openSettings();
   }
+  function openHA() { push({ id: 'ha', f: { row: 0, col: 0 }, status: {} }); }
   function addAppsRoute() { openEditor('home'); }
   function openSettings() { push({ id: 'settings', f: { id: S.settingsFocus } }); }
   function openAppearance(group) {
@@ -960,6 +965,35 @@
       else if (k === 'ok') { a = A[t.f.b][0]; pop(); if (a === 'samsung') perform('Samsung Home', FrameDevice.home); }
     },
     point: function (t, z, i) { if (z === 'act') { t.f.b = i; this.key(t, 'ok'); } }
+  };
+  /* ---------- Home Assistant panel ---------- */
+  function haKey(row, col) { return col === 0 ? row.on : row.off; }
+  function haFire(t, row, col) {
+    var key = haKey(row, col);
+    if (t.status[key] === 'sending') return;
+    t.status[key] = 'sending';
+    render();
+    HomeAssistant.fire(key, function (err) {
+      t.status[key] = err ? 'failed' : 'done';
+      render();
+      setTimeout(function () { delete t.status[key]; render(); }, 2000);
+    });
+  }
+  V.ha = {
+    sheet: true,
+    key: function (t, k) {
+      if (k === 'back') { pop(); return; }
+      if (k === 'up') t.f.row = Math.max(0, t.f.row - 1);
+      else if (k === 'down') t.f.row = Math.min(HA_ROWS.length - 1, t.f.row + 1);
+      else if (k === 'left') t.f.col = 0;
+      else if (k === 'right') t.f.col = 1;
+      else if (k === 'ok') haFire(t, HA_ROWS[t.f.row], t.f.col);
+    },
+    point: function (t, z, i) {
+      if (z !== 'act') return;
+      t.f.row = Math.floor(i / 2); t.f.col = i % 2;
+      haFire(t, HA_ROWS[t.f.row], t.f.col);
+    }
   };
 
   /* ---------- Dispatch ---------- */
@@ -1514,7 +1548,8 @@
     message: function (t) {
       var m = messageContent(t);
       return '<h2 class="msg-title">' + esc(m.title) + '</h2><p class="msg-line">' + esc(m.line) + '</p><p class="msg-note">' + esc(m.note) + '</p><div class="msg-acts" data-slot="acts"></div>';
-    }
+    },
+    ha: function () { return '<h2 class="msg-title">Home</h2><div class="ha-rows" data-slot="rows"></div>'; }
   };
   function gridTileHtml(id) {
     var a = app(id), state = onHome(id) ? badge(true) + '<span>On Home</span>' : '';
@@ -1612,8 +1647,23 @@
       setHTML(el.acts, messageContent(t).actions.map(function (a, i) {
         return '<button type="button" tabindex="-1" class="btn' + (i === t.f.b ? ' is-focus' : '') + '" data-z="act" data-i="' + i + '" data-action="message.' + a[0] + '"><span>' + a[1] + '</span></button>';
       }).join(''));
+    },
+    ha: function (t, el) {
+      setHTML(el.rows, HA_ROWS.map(function (row, ri) {
+        return '<div class="ha-row"><span class="ha-row-name">' + esc(row.label) + '</span><div class="ha-acts">'
+          + haCellHtml(t, row, ri, 0) + haCellHtml(t, row, ri, 1) + '</div></div>';
+      }).join(''));
     }
   };
+  function haStatusText(state) {
+    return state === 'sending' ? 'Sending…' : state === 'done' ? 'Done' : state === 'failed' ? 'Couldn’t reach Home Assistant' : '';
+  }
+  function haCellHtml(t, row, ri, col) {
+    var key = haKey(row, col), label = col === 0 ? 'On' : 'Off', state = t.status[key] || '', focus = t.f.row === ri && t.f.col === col;
+    return '<div class="ha-act"><button type="button" tabindex="-1" class="btn ha-btn' + (focus ? ' is-focus' : '') + (state === 'sending' ? ' is-busy' : '')
+      + '" data-z="act" data-i="' + (ri * 2 + col) + '" data-action="ha.fire.' + key + '" aria-label="' + esc(row.label + ' ' + label) + '" aria-busy="' + (state === 'sending') + '"><span>' + label + '</span></button>'
+      + '<p class="ha-status' + (state === 'failed' ? ' setting-error' : '') + '" aria-live="polite">' + esc(haStatusText(state)) + '</p></div>';
+  }
 
   /* ---------- Atomic appearance bundles ---------- */
   var wallToken = 0, committedBundle = null, reflowToken = 0, fontSwitchToken = 0;
