@@ -870,46 +870,60 @@ try {
     check('Browser All Apps has no installed fixtures', /TV/.test(await current.locator('#stage').innerText()) && !(await current.locator('[data-action^="apps.open."]').count()));
   });
   await run('Home Assistant control', async () => {
-    await page(); // no ha option at all: no HA_CONFIG, nothing to configure the control with
+    await page(); // no ha option at all: no HA_CONFIG, nothing to configure anything with
     const noConfigUtils = await current.locator('.utils .u').allTextContents();
-    check('Home control is absent without configuration', !noConfigUtils.includes('Home'), noConfigUtils);
+    check('Lights control is absent without configuration', !noConfigUtils.includes('Lights'), noConfigUtils);
+    await scene('settings');
+    const noConfigActions = await call('actions');
+    check('Home Assistant settings row is absent without configuration', !noConfigActions.includes('settings.group.ha'), noConfigActions);
     await closePage();
 
     await page({ ha: 'ok' });
     const utilNames = await current.locator('.utils .u').allTextContents();
-    check('Home control appears first when configured', utilNames[0] === 'Home', utilNames);
+    check('Lights control appears first when configured', utilNames[0] === 'Lights', utilNames);
     await nav('up');
-    check('Home control is focusable from Home', (await call('where')).focus === 'Home');
+    check('Lights control is focusable from Home', (await call('where')).focus === 'Lights');
     await act('util.ha');
-    check('OK opens the Home Assistant panel', (await call('where')).view === 'ha');
-    const rowNames = await current.locator('.ha-row-name').allTextContents();
-    check('Panel shows both configured rows in order', same(rowNames, ['Lights', 'Jellyfin light sync']), rowNames);
-    await nav('back');
-    check('Back closes the panel and returns focus to the Home control', (await call('where')).view === 'home' && (await call('where')).focus === 'Home');
-
-    await act('util.ha');
-    await act('ha.fire.lightsOn');
-    check('Pressing On shows sending feedback', /Sending/.test(await current.locator('.ha-status').nth(0).textContent()));
-    await act('ha.fire.lightsOn');
+    check('Pressing OK shows sending feedback', /Sending/.test(await current.locator('.utils .u').nth(0).textContent()));
+    await act('util.ha'); // repeat press while the first request is in flight
     const callsDuringFlight = await current.evaluate(() => window.__haCalls.length);
     check('Repeat press while in flight is ignored', callsDuringFlight === 1, callsDuringFlight);
-    await current.waitForFunction(() => (document.querySelectorAll('.ha-status')[0].textContent || '').trim() === 'Done');
-    check('Success settles to Done', true);
-    await current.waitForFunction(() => (document.querySelectorAll('.ha-status')[0].textContent || '').trim() === '', null, { timeout: 3000 });
-    check('Feedback reverts to idle after a couple of seconds', true);
+    await current.waitForFunction(() => /is-on/.test(document.querySelector('.utils .u').className));
+    check('First press fires the on webhook and marks the control on', (await current.evaluate(() => window.__haCalls[0])).includes('qa-lights-on'));
+    await current.waitForFunction(() => document.querySelector('.utils .u').textContent.trim() === 'Lights', null, { timeout: 3000 });
+    check('Label reverts to Lights after a couple of seconds', true);
+
+    await act('util.ha'); // second press: now on, should fire the off webhook
+    await current.waitForFunction(() => window.__haCalls.length === 2);
+    check('Second press fires the off webhook', (await current.evaluate(() => window.__haCalls[1])).includes('qa-lights-off'));
+    await current.waitForFunction(() => !/is-on/.test(document.querySelector('.utils .u').className));
+    check('Second press clears the on state', true);
     await closePage();
 
     await page({ ha: 'fail' });
-    await act('util.ha'); await act('ha.fire.lightsOff');
-    await current.waitForFunction(() => /reach Home Assistant/.test(document.querySelectorAll('.ha-status')[1]?.textContent || ''), null, { timeout: 3000 });
-    check('Failure shows the Home Assistant error message', true);
+    await act('util.ha');
+    await current.waitForFunction(() => /reach Home Assistant/.test(document.querySelector('.utils .u').textContent || ''), null, { timeout: 3000 });
+    const failedClass = await current.locator('.utils .u').nth(0).getAttribute('class');
+    check('Failure shows the Home Assistant error message on the control itself', !/is-on/.test(failedClass), failedClass);
     await closePage();
 
     await page({ ha: 'slow' });
-    await act('util.ha'); await act('ha.fire.jellyfinSyncOn');
-    check('Slow request stays in sending state before the client timeout', /Sending/.test(await current.locator('.ha-status').nth(2).textContent()));
-    await current.waitForFunction(() => /reach Home Assistant/.test(document.querySelectorAll('.ha-status')[2]?.textContent || ''), null, { timeout: 5000 });
+    await act('util.ha');
+    check('Slow request stays in sending state before the client timeout', /Sending/.test(await current.locator('.utils .u').nth(0).textContent()));
+    await current.waitForFunction(() => /reach Home Assistant/.test(document.querySelector('.utils .u').textContent || ''), null, { timeout: 5000 });
     check('The 4s client-side timeout produces the same error message', true);
+    await closePage();
+
+    await page({ ha: 'ok' });
+    await scene('settings'); await act('settings.group.ha');
+    check('Home Assistant settings row opens the Jellyfin sync panel', (await call('where')).view === 'ha');
+    const rowNames = await current.locator('.ha-row-name').allTextContents();
+    check('Panel holds only the Jellyfin light sync row (Lights moved to its own control)', same(rowNames, ['Jellyfin light sync']), rowNames);
+    await act('ha.fire.jellyfinSyncOn');
+    await current.waitForFunction(() => /Sending|Done/.test(document.querySelector('.ha-status')?.textContent || ''));
+    check('The settings-housed panel still fires and shows feedback', true);
+    await nav('back');
+    check('Back closes the panel and returns to Settings', (await call('where')).view === 'settings');
   });
   section = 'Run integrity';
   report.sourceAfter = hashes();
