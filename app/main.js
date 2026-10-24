@@ -47,12 +47,12 @@
   var LOOK_VALUES = { bg: ['dark', 'light', 'photo'], layout: ['list', 'dock'], apps: ['icons', 'both', 'text'], font: Object.keys(FONTS).filter(function (id) { return id === 'manrope' || PRIVATE_FONTS.indexOf(id) >= 0; }), controls: ['icons', 'both', 'text'], focus: ['type', 'glass'], material: ['soft', 'frost', 'tint'] };
   var LOOK_NAMES = { bg: 'Background', layout: 'Layout', apps: 'Apps', font: 'Font', controls: 'Home controls', focus: 'Focus', material: 'Material' };
   var VALUE_NAMES = { dark: 'Dark', light: 'Light', photo: 'Photo', list: 'List', dock: 'Dock', type: 'Type', glass: 'Glass', soft: 'Soft', frost: 'Frost', tint: 'Clear tint', icons: 'Icons', both: 'Icons and text', text: 'Text' };
-  var UTIL = { art: ['Art Mode', 'art'], apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'], light: ['Lights', 'bulb'] };
+  var UTIL = { art: ['Art Mode', 'art'], apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'], light: ['Light', 'bulb'] };
   var MSG = {
     leave: { title: 'Leave Home?', line: 'Open Samsung Home?', note: '', actions: [['stay', 'Stay'], ['samsung', 'Samsung Home']] }
   };
   var LIGHT_SWATCHES = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#6366f1', '#a855f7', '#ec4899'];
-  var LIGHT_TEMP_MIN = 2200, LIGHT_TEMP_MAX = 6500, LIGHT_TEMP_STEP = 200, LIGHT_BRIGHT_STEP = 5, LIGHT_COMMIT_MS = 700, LIGHT_LONGPRESS_MS = 500;
+  var LIGHT_TEMP_MIN = 2200, LIGHT_TEMP_MAX = 6500, LIGHT_TEMP_STEP = 200, LIGHT_BRIGHT_STEP = 5, LIGHT_LONGPRESS_MS = 500;
   var SVG = {
     art: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.8" r="1.5"/><path d="m4.5 17.5 4.5-4.5 3 3 2.5-2.5 5 5"/>',
     bulb: '<path d="M12 3.5a6.5 6.5 0 0 0-3.8 11.8c.7.5 1.3 1.3 1.3 2.3v.4h5v-.4c0-1 .6-1.8 1.3-2.3A6.5 6.5 0 0 0 12 3.5Z"/><path d="M9.8 20.3h4.4M10.3 22h3.4"/>',
@@ -544,12 +544,14 @@
   /* Long press (see the keydown handler near the bottom) additionally opens this - it never
      replaces the short-press toggle above. */
   function openLight() {
-    var tile = quickTile();
+    var tile = quickTile(), rgb, swatchIndex;
     if (!tile || (tile.brightness == null && !tile.color_mode)) return;
+    rgb = tile.rgb || { r: 255, g: 255, b: 255 };
+    swatchIndex = LIGHT_SWATCHES.indexOf(rgbToHex(rgb));
     push({ id: 'light', f: { zone: 'brightness' }, tileId: tile.id, dirty: false,
       brightness: tile.brightness == null ? 100 : tile.brightness,
       colorMode: tile.color_mode || 'white',
-      rgb: tile.rgb || { r: 255, g: 255, b: 255 },
+      rgb: rgb, swatchIndex: swatchIndex < 0 ? 0 : swatchIndex,
       colorTempK: tile.color_temp_k == null ? 4000 : tile.color_temp_k });
   }
   function addAppsRoute() { openEditor('home'); }
@@ -1012,16 +1014,12 @@
     point: function (t, z, i) { if (z === 'act') { t.f.b = i; this.key(t, 'ok'); } }
   };
   /* ---------- Light panel (brightness/colour, opened by long-pressing the Lights control) ---------- */
-  var LIGHT_ZONES = ['brightness', 'white', 'swatches'], lightCommitTimer = null;
+  var LIGHT_ZONES = ['brightness', 'white', 'swatches'];
   function rgbToHex(rgb) { return '#' + ['r', 'g', 'b'].map(function (c) { return clamp(Math.round(rgb[c] || 0), 0, 255).toString(16).replace(/^(.)$/, '0$1'); }).join(''); }
   function hexToRgb(hex) { return { r: parseInt(hex.slice(1, 3), 16), g: parseInt(hex.slice(3, 5), 16), b: parseInt(hex.slice(5, 7), 16) }; }
-  function lightTouch(t) {
-    t.dirty = true;
-    clearTimeout(lightCommitTimer);
-    lightCommitTimer = setTimeout(function () { commitLight(t); }, LIGHT_COMMIT_MS);
-  }
+  // No auto-commit/debounce: adjustments only touch local state (t.dirty just drives the
+  // subtle opacity cue) until OK explicitly sends them, same as Settings' apply-on-OK pattern.
   function commitLight(t) {
-    clearTimeout(lightCommitTimer); lightCommitTimer = null;
     if (!t.dirty) return;
     t.dirty = false;
     var body = { brightness: t.brightness, color_mode: t.colorMode };
@@ -1034,23 +1032,26 @@
   V.light = {
     sheet: true,
     key: function (t, k) {
-      var zi = LIGHT_ZONES.indexOf(t.f.zone), swatches, idx;
-      if (k === 'back') { commitLight(t); pop(); return; }
+      var zi = LIGHT_ZONES.indexOf(t.f.zone);
+      if (k === 'ok') { commitLight(t); pop(); return; }
+      if (k === 'back') { pop(); return; } // cancel: discards any unsent adjustment
       if (k === 'up' && zi > 0) { t.f.zone = LIGHT_ZONES[zi - 1]; return; }
       if (k === 'down' && zi < LIGHT_ZONES.length - 1) { t.f.zone = LIGHT_ZONES[zi + 1]; return; }
       if (k !== 'left' && k !== 'right') return;
-      if (t.f.zone === 'brightness') { t.brightness = clamp(t.brightness + (k === 'right' ? LIGHT_BRIGHT_STEP : -LIGHT_BRIGHT_STEP), 0, 100); lightTouch(t); }
-      else if (t.f.zone === 'white') { t.colorTempK = clamp(t.colorTempK + (k === 'right' ? LIGHT_TEMP_STEP : -LIGHT_TEMP_STEP), LIGHT_TEMP_MIN, LIGHT_TEMP_MAX); t.colorMode = 'white'; lightTouch(t); }
+      if (t.f.zone === 'brightness') { t.brightness = clamp(t.brightness + (k === 'right' ? LIGHT_BRIGHT_STEP : -LIGHT_BRIGHT_STEP), 0, 100); t.dirty = true; }
+      else if (t.f.zone === 'white') { t.colorTempK = clamp(t.colorTempK + (k === 'right' ? LIGHT_TEMP_STEP : -LIGHT_TEMP_STEP), LIGHT_TEMP_MIN, LIGHT_TEMP_MAX); t.colorMode = 'white'; t.dirty = true; }
       else if (t.f.zone === 'swatches') {
-        swatches = LIGHT_SWATCHES; idx = swatches.indexOf(rgbToHex(t.rgb));
-        t.rgb = hexToRgb(swatches[clamp((idx < 0 ? 0 : idx) + (k === 'right' ? 1 : -1), 0, swatches.length - 1)]);
+        // Cursor position is tracked explicitly (not derived from matching t.rgb to a preset)
+        // so the focus ring shows immediately on arrival, even before the first left/right.
+        t.swatchIndex = clamp(t.swatchIndex + (k === 'right' ? 1 : -1), 0, LIGHT_SWATCHES.length - 1);
+        t.rgb = hexToRgb(LIGHT_SWATCHES[t.swatchIndex]);
         t.colorMode = 'color';
-        lightTouch(t);
+        t.dirty = true;
       }
     },
     point: function (t, z, i) {
       if (z === 'zone') t.f.zone = LIGHT_ZONES[i];
-      else if (z === 'swatch') { t.f.zone = 'swatches'; t.rgb = hexToRgb(LIGHT_SWATCHES[i]); t.colorMode = 'color'; lightTouch(t); }
+      else if (z === 'swatch') { t.f.zone = 'swatches'; t.swatchIndex = i; t.rgb = hexToRgb(LIGHT_SWATCHES[i]); t.colorMode = 'color'; t.dirty = true; }
     }
   };
 
@@ -1194,6 +1195,16 @@
     calPanel.style.top = top + 'px';
     calPanel.style.height = Math.max(0, bottom - top) + 'px';
   }
+  function syncLightPopupGeometry(popupEl) {
+    if (S.c.layout !== 'list' || !utilsEl.children.length) { popupEl.style.top = popupEl.style.right = popupEl.style.transform = ''; return; }
+    // The Lights control is always first when shown (see utils()). Sit just left of it,
+    // vertically centred on its own height, rather than guessing a fixed offset.
+    var btn = utilsEl.children[0];
+    var x = utilsEl.offsetLeft + btn.offsetLeft, y = utilsEl.offsetTop + btn.offsetTop + btn.offsetHeight / 2;
+    popupEl.style.right = (1920 - x + 24) + 'px';
+    popupEl.style.top = y + 'px';
+    popupEl.style.transform = 'translateY(-50%)';
+  }
 
   function clockText() {
     var d = new Date(), h = d.getHours() % 12 || 12, m = d.getMinutes();
@@ -1227,20 +1238,14 @@
   function utilBtn(z, i, action, inner, extra, name) {
     return '<button type="button" tabindex="-1" class="u' + (extra || '') + '" data-z="' + z + '" data-i="' + i + '" data-action="' + action + '" aria-label="' + esc(name) + '"><span class="u-content">' + inner + '</span></button>';
   }
-  function lightLabel() {
-    var tile;
-    if (S.lightStatus === 'sending') return 'Sending…';
-    if (S.lightStatus === 'done') return 'Done';
-    if (S.lightStatus === 'failed') return 'Couldn’t reach house-api.';
-    tile = quickTile();
-    return tile ? tile.label : UTIL.light[0];
-  }
   function renderUtils(hs) {
     var html = '', style = hs.mode === 'arrange' && S.c.controls !== 'text' ? 'both' : S.c.controls;
     var iconsOnly = style === 'icons', U = utils(), focused = null;
     utilsEl.className = 'utils quiet-utils is-' + style + (hs.zone === 'util' || hs.zone === 'ctl' ? ' is-awake' : '');
     U.forEach(function (u, i) {
-      var label = u === 'light' ? lightLabel() : UTIL[u][0];
+      // The label stays static ("Light", not the tile name or Sending/Done) - a changing
+      // label was shifting the button's own width, which read as the whole row jittering.
+      var label = UTIL[u][0];
       var tile = u === 'light' ? quickTile() : null;
       var extra = u === 'light' ? ((tile && tile.state === 'on') ? ' is-on' : '') + (S.lightStatus === 'sending' ? ' is-busy' : '') + (S.lightStatus === 'failed' ? ' is-failed' : '') : '';
       html += utilBtn('util', i, 'util.' + u, icon(UTIL[u][1], '', true) + '<span class="u-label">' + esc(label) + '</span>', extra, label);
@@ -1801,9 +1806,10 @@
       el.swatches.className = 'light-swatches' + (sFocus ? ' is-focus' : '');
       setHTML(el.swatches, LIGHT_SWATCHES.map(function (hex, i) {
         var selected = rgbToHex(t.rgb) === hex;
-        return '<button type="button" tabindex="-1" class="light-swatch' + (selected ? ' is-selected' : '') + (sFocus && selected ? ' is-focus' : '')
+        return '<button type="button" tabindex="-1" class="light-swatch' + (selected ? ' is-selected' : '') + (sFocus && i === t.swatchIndex ? ' is-focus' : '')
           + '" style="background:' + hex + '" data-z="swatch" data-i="' + i + '" data-action="light.swatch.' + i + '" aria-label="Colour ' + (i + 1) + '"></button>';
       }).join(''));
+      syncLightPopupGeometry(el.popup);
     }
   };
 

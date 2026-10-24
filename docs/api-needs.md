@@ -120,10 +120,11 @@ Example: `{ "brightness": 72, "color_mode": "color", "rgb": { "r": 255, "g": 196
 
 Why: the original shape was "run an allowlisted action, no params" (fire,
 like the old webhooks). Brightness/colour adjustment needs to carry the
-new value. The UI debounces rapid adjustments (brightness, colour, mode
-all changing within ~700ms) into a single request carrying whatever
-changed, rather than one request per slider tick - a plain toggle/
-scene/button press still sends no body at all, same as before. The mock
+new value. The UI accumulates brightness/colour/temperature adjustments
+locally and sends them as a single request only when the user presses OK
+(which also closes the popup) - not one request per slider tick, and not
+on a timer either; Back cancels and sends nothing. A plain toggle/scene/
+button press still sends no body at all, same as before. The mock
 (`dev/mock.py`) merges whichever of `brightness`/`color_mode`/`rgb`/
 `color_temp_k` are present onto the tile and returns it; a tile with no
 body sent still toggles its `state` as before.

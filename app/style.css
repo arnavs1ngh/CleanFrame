@@ -419,19 +419,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .at-light .sheet-bg,.at-light .sheet-veil{display:none}
 .at-light .sheet{background:none}
 .at-light.is-sheet .home,.at-light.is-sheet .bg{visibility:visible}
-.light-popup{position:absolute;right:112px;top:170px;width:500px;padding:22px;border-radius:24px;background:rgba(6,7,8,.82);display:flex;flex-direction:column;gap:16px;transition:opacity 140ms linear}
-.l-list .light-popup{right:122px;top:auto;bottom:350px}
+.light-popup{position:absolute;right:112px;top:170px;width:460px;padding:22px;border-radius:24px;background:rgba(6,7,8,.82);color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:16px;transition:opacity 140ms linear}
+/* List: positioned in JS (syncLightPopupGeometry) directly left of the control, vertically
+   centred on it - no fixed top/right here. No card either; legibility matches the caption's
+   own ink treatment for this zone (adaptive over Photo, plain var(--ink) on flat backgrounds). */
+.l-list .light-popup{background:none}
+.bg-dark.l-list .light-popup,.bg-light.l-list .light-popup{color:var(--ink);text-shadow:none}
+.bg-photo.l-list .light-popup{color:var(--tr-ink);text-shadow:var(--tr-shadow)}
 .light-popup.is-dirty{opacity:.92}
 .light-row{display:flex;align-items:center;gap:16px;padding:0}
-.light-slider{flex:1;height:12px;border-radius:6px;background:rgba(255,255,255,.18);overflow:hidden}
-.light-slider-fill{height:100%;background:#fff;border-radius:6px}
-.light-row-value{flex:none;width:72px;text-align:right;font-size:22px;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.72)}
+.light-slider{flex:1;height:12px;border-radius:6px;background:rgba(128,128,128,.35);overflow:hidden}
+.light-slider-fill{height:100%;background:currentColor;border-radius:6px}
+.light-row-value{flex:none;width:72px;text-align:right;font-size:22px;font-variant-numeric:tabular-nums;color:currentColor;opacity:.78}
 .light-row.is-focus .light-slider,.light-row.is-focus .light-temp-track{box-shadow:0 0 0 3px var(--solid)}
 .light-temp-track{position:relative;flex:1;height:12px;border-radius:6px;background:linear-gradient(to right,#ffb454,#dceeff)}
-.light-temp-fill{position:absolute;top:-3px;width:10px;height:18px;border-radius:5px;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.4);transform:translateX(-5px)}
-.light-swatches{display:flex;align-items:center;gap:10px}
-.light-swatch{width:36px;height:36px;border-radius:50%;border:2px solid transparent}
-.light-swatch.is-selected{border-color:#fff}
+.light-temp-fill{position:absolute;top:-3px;width:10px;height:18px;border-radius:5px;background:currentColor;box-shadow:0 0 0 2px rgba(0,0,0,.4);transform:translateX(-5px)}
+.light-swatches{display:flex;align-items:center;gap:8px}
+.light-swatch{width:32px;height:32px;flex:none;border-radius:50%;border:2px solid transparent}
+.light-swatch.is-selected{border-color:currentColor}
 .light-swatches.is-focus .light-swatch.is-focus{box-shadow:0 0 0 3px var(--solid)}
 
 @media (prefers-reduced-motion:reduce){

@@ -14,31 +14,43 @@ Home Assistant (or any house backend) is now reached only through house-api
 and `/v1/actions/{id}` shape. There is no direct webhook/XHR call to Home
 Assistant from the TV anywhere in `app/`.
 
-- A "Lights" quick-access control sits next to All apps/Settings on Home,
+- A "Light" quick-access control sits next to All apps/Settings on Home,
   same `.u` styling as before. It represents whichever tile in
-  `tiles.data[]` has `quick: true` (exactly one, by convention) - its label
-  and icon come from that tile, not a hardcoded string. Hidden entirely
-  when `HouseAPI.configured()` is false, or shown generically ("Lights")
-  if configured but no quick tile exists yet.
+  `tiles.data[]` has `quick: true` (exactly one, by convention) for its
+  icon colour and on/off state. The label itself is a static "Light", not
+  the tile's name - an earlier version showed the tile name plus a
+  Sending/Done/failed status, but the changing text shifted the button's
+  own width and read as the whole row jittering. Hidden entirely when
+  `HouseAPI.configured()` is false.
 - Short press: toggles the tile (`POST /v1/actions/{id}` with no body),
-  immediately, same feel as before - sending/done/failed feedback shows
-  inline and reverts after ~2s. Repeat presses while in flight are ignored.
-- Holding OK past ~500ms *additionally* opens a brightness/colour popup
-  (`app/main.js`'s `V.light`/`FRAMES.light`/`FILLS.light`) - it does not
-  replace or delay the short-press toggle. Only opens for a tile that
-  actually has `brightness` and/or `color_mode` in its data.
-- The popup: a brightness slider, a Colour/White mode toggle, and either a
-  10-swatch colour grid or a warm↔cool temperature slider depending on
-  mode. Adjustments preview locally and debounce into a single
-  `POST /v1/actions/{id}` call ~700ms after the last change (not one call
-  per keypress), carrying whatever changed since the popup opened. Back
-  flushes any pending change immediately rather than waiting out the
-  debounce.
+  immediately, same feel as before - sending/failed is now an icon-colour
+  state (`is-busy`/`is-failed`), not label text. Repeat presses while in
+  flight are ignored.
+- Holding OK past ~500ms *additionally* opens a small brightness/colour
+  popup (`app/main.js`'s `V.light`/`FRAMES.light`/`FILLS.light`) directly
+  on the live Home scene (not a full sheet screen - see `.at-light` in
+  `app/style.css`) - it does not replace or delay the short-press toggle.
+  Only opens for a tile that actually has `brightness` and/or
+  `color_mode` in its data. No title or row labels, just the two sliders'
+  compact numeric readouts (`85%`, `3000K`) and the swatches. In List it's
+  positioned directly left of the control, vertically centred on it, via
+  `syncLightPopupGeometry`; it has no card background there either -
+  legibility matches the caption's adaptive ink treatment for that zone.
+- The popup: a brightness slider, a warm↔cool temperature slider, and a
+  10-swatch colour grid, stacked directly under each other - no mode tabs.
+  Touching the temperature slider or a swatch is what sets `color_mode`
+  implicitly (whichever you touched last), rather than a separate toggle.
+  Adjustments only touch local state until OK explicitly sends the
+  accumulated change as one `POST /v1/actions/{id}` call and closes the
+  popup; Back cancels and closes without sending anything - the same
+  apply-on-OK/cancel-on-Back pairing Settings already uses. There is no
+  auto-commit or debounce.
 - Browser coverage: `npm run check` and `CLEANFRAME_PUBLIC_FONTS=1 npm run
   check:browser` both pass, including a "Lights control" section covering
-  hidden-without-config, the tile-driven label, short-press toggle and its
-  in-flight guard, long-press opening the popup, and the debounce/flush
-  behaviour. This mocks house-api at the Playwright route level (the
+  hidden-without-config, the static label, short-press toggle and its
+  in-flight guard, long-press opening the popup, adjustments not calling
+  the API on their own, Back cancelling, and OK committing-and-closing.
+  This mocks house-api at the Playwright route level (the
   `houseApi` option on `page()` in `scripts/check-browser.mjs`) - it never
   touches a real network and proves nothing about reachability from the
   actual TV, or about a real house-api backend's behaviour.
@@ -53,9 +65,9 @@ house-api itself doesn't exist yet. Before relying on this:
   `dev/fixtures/v1/*.json`, including the `quick`, `brightness`,
   `color_mode`, `rgb` and `color_temp_k` tile fields and the
   `POST /v1/actions/{id}` request body this round added.
-- Confirm real device latency for brightness/colour pushes - the debounce
-  window (~700ms) and the 4s action timeout were tuned for responsiveness
-  against the dev mock, not a real backend or a real light's response time.
+- Confirm real device latency for brightness/colour pushes - the 4s action
+  timeout was tuned for responsiveness against the dev mock, not a real
+  backend or a real light's response time.
 - Confirm the TV can reach house-api's address from its own network
   context (not just this Mac's).
 
@@ -77,9 +89,8 @@ house-api-ui hand-off summary for the full list:
 3. **CORS testing on the TV**: confirm house-api accepts the widget's own
    origin and that requests actually succeed from the TV's WebKit/Chromium
    engine, not just in desktop preview.
-4. Real-device tests for polling cadence, visibility pause/resume (another
-   app taking the foreground), and the action debounce under real network
-   conditions.
+4. Real-device tests for polling cadence and visibility pause/resume
+   (another app taking the foreground) under real network conditions.
 
 ## Where things stand
 
@@ -87,7 +98,8 @@ The webhook approach (branch `ha-controls`, merged to `main`) is fully
 retired. The house-api-backed replacement was built on `house-api-ui`;
 see that branch's commit history for the design iteration, including the
 mid-build redirects (control+panel → always-visible calendar; swatch-grid
-colour picker; debounced auto-commit instead of explicit OK).
+colour picker; briefly a debounced auto-commit, then back to explicit
+OK-applies/Back-cancels; full sheet screen → compact popup on Home).
 `docs/agent-tv-setup-guide.md` and `docs/for-agents.md` cover the install
 round itself once house-api exists and the above is ready;
 `.local/setup-record.md` (gitignored, local to this Mac) has the

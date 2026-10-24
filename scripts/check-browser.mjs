@@ -885,22 +885,22 @@ try {
     const QA_LIGHT = { id: 'qa-light', label: 'Living room', icon: 'bulb', kind: 'toggle', state: 'off', quick: true, brightness: 60, color_mode: 'white', color_temp_k: 4000, rgb: { r: 255, g: 255, b: 255 } };
     await page(); // no houseApi option: nothing to configure anything with
     const noConfigUtils = await current.locator('.utils .u').allTextContents();
-    check('Lights control is absent without configuration', !noConfigUtils.some(t => /Living room|Lights/.test(t)), noConfigUtils);
+    check('Lights control is absent without configuration', !noConfigUtils.some(t => /Light/.test(t)), noConfigUtils);
     await closePage();
 
     await page({ houseApi: QA_LIGHT });
     const utilNames = await current.locator('.utils .u').allTextContents();
-    check('Lights control appears first, labelled from the tile', utilNames[0] === 'Living room', utilNames);
+    check('Lights control appears first, with a static label (not the tile name)', utilNames[0] === 'Light', utilNames);
     await nav('up');
-    check('Lights control is focusable from Home', (await call('where')).focus === 'Living room');
+    check('Lights control is focusable from Home', (await call('where')).focus === 'Light');
     await act('util.light');
-    check('Pressing OK shows sending feedback', /Sending/.test(await current.locator('.utils .u').nth(0).textContent()));
+    check('Pressing OK marks it sending via the icon state, not a changing label (avoids layout jitter)',
+      /is-busy/.test(await current.locator('.utils .u').nth(0).getAttribute('class')) && (await current.locator('.utils .u').nth(0).textContent()).trim() === 'Light');
     await act('util.light'); // repeat press while the first request is in flight
     check('Repeat press while in flight is ignored', current.__houseApi.actionCalls.length === 1, current.__houseApi.actionCalls);
     await current.waitForFunction(() => /is-on/.test(document.querySelector('.utils .u').className));
     check('A short press fires a plain toggle (no body) and marks the control on', Object.keys(current.__houseApi.actionCalls[0].body).length === 0, current.__houseApi.actionCalls[0]);
-    await current.waitForFunction(() => document.querySelector('.utils .u').textContent.trim() === 'Living room', null, { timeout: 3000 });
-    check('Label reverts to the tile label after a couple of seconds', true);
+    check('Label stayed static throughout', (await current.locator('.utils .u').nth(0).textContent()).trim() === 'Light');
     await closePage();
 
     await page({ houseApi: { ...QA_LIGHT, state: 'on' } });
@@ -924,17 +924,22 @@ try {
     for (let i = 0; i < 3; i++) await nav('right'); // brightness 60 -> 75
     await nav('down'); // white zone
     await nav('down'); // swatches zone
+    check('A swatch shows the focus ring immediately on arrival, before any left/right',
+      await current.locator('.light-swatch.is-focus').count() === 1, await current.locator('.light-swatch').evaluateAll(els => els.map(e => e.className)));
     await nav('right'); // pick a swatch - sets colour mode without a separate tab
-    await current.waitForTimeout(900); // past the debounce
-    const committed = current.__houseApi.actionCalls.at(-1);
-    check('Adjustments debounce into a single action carrying brightness + colour together',
-      current.__houseApi.actionCalls.length === 2 && committed.body.brightness === 75 && committed.body.color_mode === 'color' && !!committed.body.rgb, current.__houseApi.actionCalls);
+    check('Adjustments never call the API on their own - only OK sends anything', current.__houseApi.actionCalls.length === 1, current.__houseApi.actionCalls);
 
-    await nav('left'); // one more colour change
-    check('A fresh adjustment resets the debounce rather than firing immediately', current.__houseApi.actionCalls.length === 2);
-    await nav('back');
-    check('Back flushes the still-pending change immediately instead of waiting out the debounce', current.__houseApi.actionCalls.length === 3, current.__houseApi.actionCalls);
-    check('Back closes the popup', (await call('where')).view === 'home');
+    await nav('back'); // cancel
+    check('Back closes without sending the pending adjustment', current.__houseApi.actionCalls.length === 1 && (await call('where')).view === 'home');
+
+    await current.keyboard.down('Enter');
+    await current.waitForFunction(() => ShoreQA.where().view === 'light', null, { timeout: 2000 });
+    await current.keyboard.up('Enter');
+    for (let i = 0; i < 2; i++) await nav('right'); // brightness 60 -> 70
+    await nav('ok');
+    const committed = current.__houseApi.actionCalls.at(-1);
+    check('OK sends the adjustment and closes the popup in one step',
+      current.__houseApi.actionCalls.length === 3 && committed.body.brightness === 70 && (await call('where')).view === 'home', current.__houseApi.actionCalls);
   });
   section = 'Run integrity';
   report.sourceAfter = hashes();

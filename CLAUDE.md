@@ -83,18 +83,25 @@ entries. Everything now goes through house-api's `tiles` data; see
 `docs/home-assistant.md` for the full history/status.
 
 - The Home-row control represents whichever tile has `quick: true` (see
-  `docs/api-needs.md`) - label/icon/on-off state all come from that tile,
-  not a hardcoded string.
+  `docs/api-needs.md`) - on-off state and icon colour come from that tile.
+  The label itself is static ("Light", `UTIL.light[0]`) - it used to show
+  the tile name and a Sending/Done/failed status, but a changing label
+  shifted the button's own width, which read as the whole row jittering.
 - Short press toggles immediately, same as before. Holding OK past
   `LIGHT_LONGPRESS_MS` (~500ms, see the keydown handler near the bottom of
-  `app/main.js`) *additionally* opens a brightness/colour popup
-  (`V.light`/`FRAMES.light`/`FILLS.light`) - it never delays or cancels
+  `app/main.js`) *additionally* opens a small brightness/colour popup
+  directly on the live Home scene, not a full sheet screen (see
+  `app/style.css`'s `.at-light` overrides) - it never delays or cancels
   the short-press toggle underneath it. Only opens for a tile with
-  `brightness` and/or `color_mode` present.
-- The popup debounces adjustments (`LIGHT_COMMIT_MS`, ~700ms) into a
-  single `POST /v1/actions/{id}` call carrying whatever changed, instead
-  of firing on every keypress; Back flushes any pending change
-  immediately rather than waiting out the debounce.
+  `brightness` and/or `color_mode` present. In List it's positioned
+  dynamically (`syncLightPopupGeometry`) directly left of the control,
+  vertically centred on it, with no card background - legibility matches
+  the caption's own ink treatment for that zone.
+- No auto-commit: adjustments only touch local state (`t.dirty` drives a
+  subtle opacity cue, nothing else) until OK explicitly sends the
+  accumulated change as a single `POST /v1/actions/{id}` call and closes
+  the popup. Back cancels and closes without sending anything - same
+  apply-on-OK/cancel-on-Back pairing Settings already uses.
 - `scripts/check-browser.mjs`'s `page()` has a `houseApi` option (a tile
   object) that mocks `house-api-config.js` + `/v1/home` + `/v1/actions/*`
   at the Playwright route level - see the "Lights control" test section
