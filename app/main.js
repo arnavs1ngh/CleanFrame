@@ -1036,7 +1036,7 @@
 
   /* ---------- Rendering ---------- */
   var $ = function (id) { return document.getElementById(id); };
-  var stage = $('stage'), homeEl = $('home'), caption = $('caption'), utilsEl = $('utils');
+  var stage = $('stage'), homeEl = $('home'), caption = $('caption'), utilsEl = $('utils'), calPanel = $('calPanel'), calRows = $('calRows');
   var utilFocusLabel = $('utilFocusLabel'), utilFocusKey = '', appFocusName = $('appFocusName');
   var dock = $('dock'), shelf = $('shelf'), track = $('track'), plate = $('plate'), matScrim = $('matScrim'), dockEmpty = $('dockEmpty');
   var cueL = $('cueL'), cueR = $('cueR'), dockAction = $('dockAction');
@@ -1111,9 +1111,48 @@
     var hs = homeState(t);
     renderCaption(t, hs);
     renderUtils(hs);
+    renderCalendar();
     if (S.c.layout === 'list') renderList(hs);
     else { photoMode = null; renderDock(hs); }
     renderAppFocusName(hs);
+  }
+
+  var MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function spanEndLabel(dateStr) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || '');
+    return m ? 'to ' + parseInt(m[3], 10) + ' ' + MONTH_ABBR[parseInt(m[2], 10) - 1] : '';
+  }
+  function spanKey(ev) { return ev.title + '|' + (ev.calendar || '') + '|' + ev.span.start_date + '|' + ev.span.end_date; }
+  function calendarEventHtml(ev, seenSpans) {
+    var cls = 'cal-event' + (ev.all_day ? ' is-allday' : '') + (ev.redacted ? ' is-redacted' : '');
+    var time = !ev.all_day && ev.time ? '<span class="cal-ev-time">' + esc(ev.time) + '</span>' : '';
+    var continuing = false, span = '';
+    if (ev.all_day && ev.span && ev.span.end_date) {
+      var key = spanKey(ev);
+      continuing = !!seenSpans[key]; seenSpans[key] = true;
+      // Show the date range once, on the day the span starts; later days just repeat the title.
+      if (!continuing) span = '<span class="cal-ev-span">' + esc(spanEndLabel(ev.span.end_date)) + '</span>';
+    }
+    return '<div class="' + cls + (continuing ? ' is-continuing' : '') + '">' + time + '<span class="cal-ev-title">' + esc(ev.title || '') + '</span>' + span + '</div>';
+  }
+  function calendarDayHtml(day, seenSpans) {
+    var events = (day.events || []).slice().sort(function (a, b) { return (b.all_day ? 1 : 0) - (a.all_day ? 1 : 0); });
+    var visible = events.slice(0, 3), extra = events.length - visible.length, html;
+    html = '<div class="cal-day"><div class="cal-day-label">' + esc(day.label) + '</div>';
+    if (!events.length) html += '<div class="cal-event is-empty">No events</div>';
+    else {
+      visible.forEach(function (ev) { html += calendarEventHtml(ev, seenSpans); });
+      if (extra > 0) html += '<div class="cal-more">+' + extra + ' more</div>';
+    }
+    return html + '</div>';
+  }
+  function renderCalendar() {
+    var snap = S.house, home = snap && snap.home, c = home && home.calendar, days = c && c.data && c.data.days, seenSpans = {};
+    if (!c || c.status !== 'ok' || !days || !days.length) {
+      calPanel.className = 'cal-panel is-hidden'; setHTML(calRows, ''); return;
+    }
+    calPanel.className = 'cal-panel' + (snap.stale || c.stale ? ' is-stale' : '');
+    setHTML(calRows, days.map(function (day) { return calendarDayHtml(day, seenSpans); }).join(''));
   }
 
   function clockText() {
