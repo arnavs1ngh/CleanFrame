@@ -916,8 +916,9 @@ try {
     check('Holding OK opens the brightness/colour popup', (await call('where')).view === 'light');
     await current.keyboard.up('Enter');
     check('Opening the popup did not swallow the short-press toggle underneath it', current.__houseApi.actionCalls.length === 1, current.__houseApi.actionCalls);
-    const title = await current.locator('.light-title').textContent();
-    check('Popup title shows the tile label', title === 'Living room', title);
+    check('Compact popup renders, no full-screen title', await current.locator('.light-popup').isVisible());
+    const veilDisplay = await current.locator('.sheet-veil').evaluate(el => getComputedStyle(el).display);
+    check('The full-screen sheet veil is suppressed so Home stays visible behind the popup', veilDisplay === 'none', veilDisplay);
     check('Brightness is the first focused zone', (await current.locator('.light-row').first().getAttribute('class')).includes('is-focus'));
 
     for (let i = 0; i < 3; i++) await nav('right'); // brightness 60 -> 75

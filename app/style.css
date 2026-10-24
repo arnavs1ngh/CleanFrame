@@ -414,20 +414,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .msg-note{position:absolute;left:140px;top:540px;max-width:1200px;font-size:30px;line-height:42px;color:var(--mute)}
 .msg-acts{position:absolute;left:112px;top:660px;display:flex;gap:12px}
 /* Light panel: brightness/colour, opened by long-pressing the Lights control. */
-.light-row{position:absolute;left:140px;top:420px;width:1500px;display:flex;align-items:center;gap:24px;padding:0}
-.light-row[data-i="1"]{top:504px}
-.light-row-label{flex:none;width:260px;font-size:34px;line-height:44px;font-weight:500;color:var(--ink)}
-.light-slider{flex:1;height:16px;border-radius:8px;background:var(--line);overflow:hidden}
-.light-slider-fill{height:100%;background:var(--ink);border-radius:8px}
-.light-row-value{flex:none;width:110px;text-align:right;font-size:30px;font-variant-numeric:tabular-nums;color:var(--mute)}
+/* Light popup: a small card directly on the Home scene, not a full sheet screen - the sheet's
+   own backdrop/veil/photo-clone are suppressed below so the real Home stays visible behind it. */
+.at-light .sheet-bg,.at-light .sheet-veil{display:none}
+.at-light .sheet{background:none}
+.at-light.is-sheet .home,.at-light.is-sheet .bg{visibility:visible}
+.light-popup{position:absolute;right:112px;top:170px;width:500px;padding:22px;border-radius:24px;background:rgba(6,7,8,.82);display:flex;flex-direction:column;gap:16px;transition:opacity 140ms linear}
+.l-list .light-popup{right:122px;top:auto;bottom:350px}
+.light-popup.is-dirty{opacity:.92}
+.light-row{display:flex;align-items:center;gap:16px;padding:0}
+.light-slider{flex:1;height:12px;border-radius:6px;background:rgba(255,255,255,.18);overflow:hidden}
+.light-slider-fill{height:100%;background:#fff;border-radius:6px}
+.light-row-value{flex:none;width:72px;text-align:right;font-size:22px;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.72)}
 .light-row.is-focus .light-slider,.light-row.is-focus .light-temp-track{box-shadow:0 0 0 3px var(--solid)}
-.light-temp-track{position:relative;flex:1;height:16px;border-radius:8px;background:linear-gradient(to right,#ffb454,#dceeff)}
-.light-temp-fill{position:absolute;top:-4px;width:12px;height:24px;border-radius:6px;background:var(--ink);box-shadow:0 0 0 2px var(--ground);transform:translateX(-6px)}
-.light-swatches{position:absolute;left:140px;top:588px;width:1500px;display:flex;align-items:center;gap:18px}
-.light-swatch{width:72px;height:72px;border-radius:50%;border:3px solid transparent}
-.light-swatch.is-selected{border-color:var(--ink)}
-.light-swatches.is-focus .light-swatch.is-focus{box-shadow:0 0 0 4px var(--solid)}
-.light-hint{position:absolute;left:140px;top:672px;font-size:26px;color:var(--mute);min-height:34px}
+.light-temp-track{position:relative;flex:1;height:12px;border-radius:6px;background:linear-gradient(to right,#ffb454,#dceeff)}
+.light-temp-fill{position:absolute;top:-3px;width:10px;height:18px;border-radius:5px;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.4);transform:translateX(-5px)}
+.light-swatches{display:flex;align-items:center;gap:10px}
+.light-swatch{width:36px;height:36px;border-radius:50%;border:2px solid transparent}
+.light-swatch.is-selected{border-color:#fff}
+.light-swatches.is-focus .light-swatch.is-focus{box-shadow:0 0 0 3px var(--solid)}
 
 @media (prefers-reduced-motion:reduce){
   .stage,.stage *{transition:none!important;animation:none!important}

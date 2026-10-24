@@ -1116,7 +1116,7 @@
     if (!adaptive && shown.dockClockInk) stage.style.setProperty('--dock-clock-ink', shown.dockClockInk);
     else stage.style.removeProperty('--dock-clock-ink');
     applyHomeFont();
-    if (!sheet) renderHome(t);
+    if (!sheet || t.id === 'light') renderHome(t);
     renderSheet(t, sheet);
     renderAppearance(t);
     renderFocusStatus(t);
@@ -1683,11 +1683,11 @@
       return '<h2 class="msg-title">' + esc(m.title) + '</h2><p class="msg-line">' + esc(m.line) + '</p><p class="msg-note">' + esc(m.note) + '</p><div class="msg-acts" data-slot="acts"></div>';
     },
     light: function () {
-      return '<h2 class="msg-title light-title" data-slot="title"></h2>'
-        + '<button type="button" tabindex="-1" class="light-row" data-slot="brightnessRow" data-z="zone" data-i="0" data-action="light.zone.brightness"><span class="light-row-label">Brightness</span><div class="light-slider" data-slot="brightnessSlider"></div><span class="light-row-value" data-slot="brightnessValue"></span></button>'
-        + '<button type="button" tabindex="-1" class="light-row" data-slot="whiteRow" data-z="zone" data-i="1" data-action="light.zone.white"><span class="light-row-label">White</span><div class="light-temp-track" data-slot="tempTrack"></div><span class="light-row-value" data-slot="tempValue"></span></button>'
+      return '<div class="light-popup" data-slot="popup">'
+        + '<button type="button" tabindex="-1" class="light-row" data-slot="brightnessRow" data-z="zone" data-i="0" data-action="light.zone.brightness"><div class="light-slider" data-slot="brightnessSlider"></div><span class="light-row-value" data-slot="brightnessValue"></span></button>'
+        + '<button type="button" tabindex="-1" class="light-row" data-slot="whiteRow" data-z="zone" data-i="1" data-action="light.zone.white"><div class="light-temp-track" data-slot="tempTrack"></div><span class="light-row-value" data-slot="tempValue"></span></button>'
         + '<div class="light-swatches" data-slot="swatches"></div>'
-        + '<p class="light-hint" data-slot="hint" aria-live="polite"></p>';
+        + '</div>';
     }
   };
   function gridTileHtml(id) {
@@ -1789,8 +1789,8 @@
       }).join(''));
     },
     light: function (t, el) {
-      var tile = quickTile() || {}, bFocus = t.f.zone === 'brightness', wFocus = t.f.zone === 'white', sFocus = t.f.zone === 'swatches', pct;
-      setHTML(el.title, esc(tile.label || UTIL.light[0]));
+      var bFocus = t.f.zone === 'brightness', wFocus = t.f.zone === 'white', sFocus = t.f.zone === 'swatches', pct;
+      el.popup.className = 'light-popup' + (t.dirty ? ' is-dirty' : '');
       el.brightnessRow.className = 'light-row' + (bFocus ? ' is-focus' : '');
       setHTML(el.brightnessSlider, '<div class="light-slider-fill" style="width:' + t.brightness + '%"></div>');
       setHTML(el.brightnessValue, t.brightness + '%');
@@ -1804,7 +1804,6 @@
         return '<button type="button" tabindex="-1" class="light-swatch' + (selected ? ' is-selected' : '') + (sFocus && selected ? ' is-focus' : '')
           + '" style="background:' + hex + '" data-z="swatch" data-i="' + i + '" data-action="light.swatch.' + i + '" aria-label="Colour ' + (i + 1) + '"></button>';
       }).join(''));
-      setHTML(el.hint, t.dirty ? 'Saving…' : '');
     }
   };
 
@@ -1955,7 +1954,7 @@
   function updateClock() {
     clearTimeout(clockTimer);
     if (document.hidden) return;
-    if (top().id === 'home' || isSettingsDetail(top())) renderCaption(top(), homeState(top()));
+    if (top().id === 'home' || top().id === 'light' || isSettingsDetail(top())) renderCaption(top(), homeState(top()));
     clockTimer = setTimeout(updateClock, 60000 - (Date.now() % 60000) + 30);
   }
   function focusStage() { try { stage.focus({ preventScroll: true }); } catch (e) { stage.focus(); } }
@@ -2034,7 +2033,7 @@
     // Holding OK on the Lights control opens brightness/colour, in addition to (not instead of)
     // the immediate toggle below - avoids delaying the common quick-toggle case.
     if (k === 'ok' && !longPressTimer && focusedUtil() === 'light') {
-      longPressTimer = setTimeout(function () { longPressTimer = null; openLight(); }, LIGHT_LONGPRESS_MS);
+      longPressTimer = setTimeout(function () { longPressTimer = null; openLight(); render(); }, LIGHT_LONGPRESS_MS);
     }
     press(k);
   });
