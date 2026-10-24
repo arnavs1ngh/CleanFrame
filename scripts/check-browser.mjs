@@ -239,6 +239,10 @@ try {
     check('Next completed edit writes stable home key', (await stored()).dock[0] === 'netflix');
     await current.reload(); await ready();
     check('Migrated preferences survive reload', (await state()).look.controls === 'text' && (await state()).dock[0] === 'netflix');
+    await closePage();
+    await page({ seed: undefined });
+    const fresh = (await state()).look;
+    check('Genuinely fresh install defaults to List/Type/Icons/Icons', fresh.layout === 'list' && fresh.focus === 'type' && fresh.apps === 'icons' && fresh.controls === 'icons', fresh);
   });
   await run('Invalid preferences and saved native pins', async () => {
     await page({ seed: '{broken', legacy: baseline({ dock: ['netflix'], lastApp: 'netflix' }) });
