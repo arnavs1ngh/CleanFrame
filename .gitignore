@@ -29,6 +29,9 @@ PP*.woff2
 # Private house-api config (backend base URL). Copy from house-api-config.example.js.
 /app/house-api-config.js
 
+# Playwright MCP session artifacts (snapshots/console logs from manual browser checks).
+/.playwright-mcp/
+
 # Personal studies, research and draft writing stay local.
 /explorations/
 /docs/research/

@@ -30,6 +30,10 @@ for filename in ['index.html']:
     for reference in re.findall(pattern, source):
         if ':' in reference or reference.startswith('$'):
             continue
+        # Pre-wiring only: house-api doesn't exist yet, so house-api-config.js stays gitignored
+        # and optional - its absence must hide the house features, not fail the check.
+        if reference == 'house-api-config.js' and not (app / reference).is_file():
+            continue
         assert (app / reference).is_file(), 'Missing bundled resource: ' + reference
         if filename.endswith('.js'):
             assert reference.startswith(('./', '../')), 'Module imports must be relative paths'
