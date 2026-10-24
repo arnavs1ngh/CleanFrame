@@ -10,7 +10,10 @@ export async function openPreview({ publicFonts = false } = {}) {
   const args = ['scripts/preview.py', '--port', '0'];
   if (publicFonts || process.env.CLEANFRAME_PUBLIC_FONTS === '1') args.push('--public-fonts');
   const server = spawn('python3', args, {
-    cwd: root, stdio: ['ignore', 'pipe', 'pipe']
+    cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
+    // Automated tooling must not get the dev-only live-reload long-poll: it never settles,
+    // so Playwright's networkidle wait would hang forever.
+    env: { ...process.env, CLEANFRAME_NO_LIVE_RELOAD: '1' }
   });
   let browser;
   let diagnostics = '';

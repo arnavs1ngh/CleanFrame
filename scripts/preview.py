@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import io
+import os
 import sys
 import threading
 import time
@@ -13,6 +14,10 @@ from font_assets import font_overlay
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from dev.mock import handle_get_home, handle_post_action  # DEV-ONLY, never used by app/
+
+# Automated Playwright tooling (check-browser.mjs, shots.mjs, build-icon-metrics.mjs) spawns
+# this server via browser.mjs, which sets this to keep the long-poll from blocking networkidle.
+LIVE_RELOAD = os.environ.get('CLEANFRAME_NO_LIVE_RELOAD') != '1'
 
 LIVE_RELOAD_SCRIPT = (
     "<script>(function(){var rev=null;function poll(){"
@@ -83,7 +88,8 @@ class Preview(SimpleHTTPRequestHandler):
     def _serve_index(self):
         # DEV-ONLY: inject a live-reload poller into the served HTML. The file on disk is untouched.
         content = (ROOT / 'app/index.html').read_bytes()
-        content = content.replace(b'</body>', LIVE_RELOAD_SCRIPT.encode() + b'</body>')
+        if LIVE_RELOAD:
+            content = content.replace(b'</body>', LIVE_RELOAD_SCRIPT.encode() + b'</body>')
         self.send_response(200)
         self.send_header('Content-Type', 'text/html')
         self.send_header('Content-Length', str(len(content)))
@@ -168,6 +174,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     server = PreviewServer(('127.0.0.1', args.port), Preview)
     server.include_private_fonts = not args.public_fonts
-    threading.Thread(target=_watch_loop, daemon=True).start()
+    if LIVE_RELOAD:
+        threading.Thread(target=_watch_loop, daemon=True).start()
     print('CleanFrame preview: http://127.0.0.1:' + str(server.server_port) + '/home/', flush=True)
     server.serve_forever()
