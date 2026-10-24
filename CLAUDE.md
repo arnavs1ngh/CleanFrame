@@ -1,0 +1,87 @@
+# CLAUDE.md
+
+Project-wide instructions live in `AGENTS.md` - read that first. This file
+covers the house-api-ui dev tooling added on the `house-api-ui` branch.
+
+## ES5 rule
+
+`app/**/*.js` must stay ES5-compatible (the TV's engine; see
+`docs/development.md`). `eslint.config.mjs` parses those files with
+`ecmaVersion: 5, sourceType: 'script'`, wired into `npm run check` via
+`scripts/eslint-report.mjs`. An ES6+ syntax regression (let/const, arrow
+functions, classes, template literals, ...) is a fatal parse error and
+fails the check. Everything else ESLint reports against the existing
+source is printed as a non-blocking finding - fixing pre-existing issues
+is out of scope for unrelated work; see `docs/api-needs.md` for the one
+worth following up (`app/main.js`'s undefined `live(...)` call).
+
+## house-api is local-only mock data right now
+
+house-api doesn't exist yet. `app/house-api-config.js` (gitignored) will
+hold `HOUSE_API_BASE`, with `app/house-api-config.example.js` as the
+committed template - same pattern as `ha-config.js`. If that file is
+missing, the house features stay hidden and the app works exactly as it
+does today.
+
+### Fixtures
+
+`dev/fixtures/v1/*.json` holds one `/v1/home` response per scenario:
+`normal`, `quiet-day`, `busy-week`, `long-titles`, `all-day-and-multiday`,
+`redacted`, `ha-down`, `weather-missing`, `many-tiles`, `night`,
+`stale-everything`. These are the house-api spec in progress - when the
+UI needs a field, behaviour or limit not in the starting shape, add it to
+the fixtures and log it in `docs/api-needs.md`.
+
+### Mock server
+
+`dev/mock.py` is DEV-ONLY: it's imported only by `scripts/preview.py`,
+never by anything under `app/`. Routes, served by `npm run dev`:
+
+- `GET /mock/v1/home?scenario=<name>&delay=<ms>&fail=<0|1>` - serves a
+  fixture, supports `ETag`/`If-None-Match` -> 304, and `fail=1` returns a
+  500.
+- `POST /mock/v1/actions/{tile-id}?scenario=<name>&delay=<ms>&fail=<0|1>`
+  - flips a toggle tile's in-memory state (reset on preview restart) and
+    returns `{ ok, tile }`. `fail=1` returns `{ ok: false, tile }` without
+    flipping state.
+
+When no real `app/house-api-config.js` is present, `npm run dev` serves a
+dev-only default `house-api-config.js` pointing `HOUSE_API_BASE` at
+`/mock`, so the preview works against mock data with zero setup.
+
+### Live reload
+
+`npm run dev` injects a small poller into the served `index.html` (the
+file on disk is never touched) that reloads the page when anything under
+`app/` or `dev/fixtures/` changes. Automated Playwright tooling
+(`check-browser.mjs`, `shots.mjs`, `build-icon-metrics.mjs`, all via
+`scripts/browser.mjs`) sets `CLEANFRAME_NO_LIVE_RELOAD=1` so the long-poll
+doesn't block `networkidle` waits - don't remove that env var without
+checking those still pass.
+
+### `npm run shots`
+
+Screenshots every fixture scenario in List and Dock, at 1920x1080 and
+1280x720, plus a handful of named focus states, into gitignored
+`.local/shots/`, plus a single composited `contact-sheet.png`. It
+intercepts `**/v1/home*` at the Playwright level with the raw fixture
+body, so it doesn't depend on how `app/house-api.js` ends up building its
+request URL. Run it after any change to the weather strip, calendar
+panel or Home Assistant panel and review the contact sheet before calling
+a UI piece done - see the workflow in the house-api-ui task description
+(`normal.json` first, then every scenario, especially `long-titles`,
+`busy-week`, `ha-down`, `redacted` and `night`).
+
+## Never package dev code
+
+`dev/` (the mock server and fixtures) must never end up in a built
+widget, and neither must `app/house-api-config.example.js`. `npm run
+check` builds a real (unsigned, no credentials) dry-run widget via
+`write_widget_archive` and asserts neither is in it - see `scripts/check.py`.
+
+## API needs log
+
+`docs/api-needs.md` is the running list of fields/behaviours/limits the
+UI needs beyond the starting `/v1/home` shape, why, and whether house-api
+or the TV should compute them. It and the final `dev/fixtures/v1/*.json`
+are the house-api spec handed off at the end of this task.
