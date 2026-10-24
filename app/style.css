@@ -48,7 +48,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .wx-label{max-width:320px;overflow:hidden;text-overflow:ellipsis;font-weight:400}
 .wx-range{opacity:.78;font-weight:400;font-variant-numeric:tabular-nums}
 /* Calendar: always-visible read-only 7-day list, not a control or panel. */
-.cal-panel{position:absolute;left:140px;top:260px;width:760px;height:380px;border-radius:28px;background:rgba(6,7,8,.66);-webkit-mask-image:linear-gradient(to bottom,#000 0,#000 86%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0,#000 86%,transparent 100%);transition:opacity 140ms linear}
+.cal-panel{position:absolute;left:140px;top:260px;width:760px;height:380px;border-radius:28px;background:rgba(6,7,8,.66);transition:opacity 140ms linear}
 .cal-panel.is-hidden{display:none}
 .cal-panel.is-stale{opacity:.6}
 .l-list .cal-panel{left:auto;right:140px;background:none}
