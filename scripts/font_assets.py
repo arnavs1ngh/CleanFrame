@@ -32,7 +32,7 @@ PRIVATE_FONTS = [
 
 def is_runtime_source(name):
     """Keep retained rendering tools and legacy layout assets out of the widget."""
-    if name in ['grid.css', 'optics.js', 'ha-config.example.js']:
+    if name in ['grid.css', 'optics.js', 'ha-config.example.js', 'house-api-config.example.js']:
         return False
     if name.startswith(('assets/grid/', 'assets/vendor/')):
         return False

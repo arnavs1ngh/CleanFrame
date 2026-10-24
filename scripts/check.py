@@ -4,8 +4,10 @@ import json
 import xml.etree.ElementTree as XML
 import re
 import sys
+import tempfile
+import zipfile
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from font_assets import is_runtime_source
+from font_assets import is_runtime_source, write_widget_archive
 
 root = Path(__file__).resolve().parents[1]
 app = root / 'app'
@@ -62,4 +64,18 @@ assert access_match.group(2) == 'false', 'Access origin should not blanket-allow
 ha_config_text = (app / 'ha-config.js').read_text()
 base_match = re.search(r'base\s*:\s*[\'"]([^\'"]+)[\'"]', ha_config_text)
 assert base_match and base_match.group(1).startswith(access_match.group(1)), 'config.xml access origin does not match ha-config.js base'
+
+# house-api: pre-wiring dev tooling only. The example config is a template and must
+# stay out of the packaged widget; dev/ (mock server, fixtures) lives outside app/ and
+# must never end up in a built widget either.
+assert (app / 'house-api-config.example.js').is_file(), 'Missing app/house-api-config.example.js template'
+assert not is_runtime_source('house-api-config.example.js'), 'house-api-config.example.js must be excluded from the packaged widget'
+with tempfile.TemporaryDirectory() as tmp:
+    dry_run = Path(tmp) / 'check-dry-run.wgt'
+    write_widget_archive(dry_run, include_private=False)
+    with zipfile.ZipFile(dry_run) as archive:
+        names = archive.namelist()
+assert not any(name.startswith('dev/') for name in names), 'dev/ (mock server, fixtures) must not be packaged'
+assert not any('mock' in name.lower() for name in names), 'Mock code must not be packaged'
+assert 'house-api-config.example.js' not in names, 'house-api-config.example.js must not be packaged'
 print('Widget identity, version and bundled resources are valid.')
