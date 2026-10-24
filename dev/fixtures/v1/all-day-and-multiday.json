@@ -1,0 +1,61 @@
+{
+  "meta": { "version": 1, "generated_at": "2026-10-24T08:00:00Z", "refresh_after_s": 60 },
+  "weather": {
+    "status": "ok",
+    "stale": false,
+    "data": {
+      "now": { "temp_c": 10, "icon": "snow", "label": "Light snow" },
+      "today": { "high_c": 11, "low_c": 2 },
+      "next_hours": [
+        { "time": "08:00", "temp_c": 10, "icon": "snow" },
+        { "time": "09:00", "temp_c": 10, "icon": "snow" }
+      ]
+    }
+  },
+  "calendar": {
+    "status": "ok",
+    "stale": false,
+    "data": {
+      "days": [
+        {
+          "label": "Today",
+          "events": [
+            { "time": null, "end": null, "all_day": true, "title": "Half-term holidays", "calendar": "House", "redacted": false, "span": { "start_date": "2026-10-24", "end_date": "2026-11-02" } },
+            { "time": "19:30", "end": "21:00", "all_day": false, "title": "House dinner", "calendar": "House", "redacted": false }
+          ]
+        },
+        {
+          "label": "Tomorrow",
+          "events": [
+            { "time": null, "end": null, "all_day": true, "title": "Half-term holidays", "calendar": "House", "redacted": false, "span": { "start_date": "2026-10-24", "end_date": "2026-11-02" } }
+          ]
+        },
+        {
+          "label": "Wednesday",
+          "events": [
+            { "time": null, "end": null, "all_day": true, "title": "Half-term holidays", "calendar": "House", "redacted": false, "span": { "start_date": "2026-10-24", "end_date": "2026-11-02" } },
+            { "time": null, "end": null, "all_day": true, "title": "Grandma visiting", "calendar": "Personal", "redacted": false, "span": { "start_date": "2026-10-26", "end_date": "2026-10-28" } }
+          ]
+        },
+        {
+          "label": "Thursday",
+          "events": [
+            { "time": null, "end": null, "all_day": true, "title": "Half-term holidays", "calendar": "House", "redacted": false, "span": { "start_date": "2026-10-24", "end_date": "2026-11-02" } },
+            { "time": null, "end": null, "all_day": true, "title": "Grandma visiting", "calendar": "Personal", "redacted": false, "span": { "start_date": "2026-10-26", "end_date": "2026-10-28" } }
+          ]
+        },
+        { "label": "Friday", "events": [ { "time": null, "end": null, "all_day": true, "title": "Half-term holidays", "calendar": "House", "redacted": false, "span": { "start_date": "2026-10-24", "end_date": "2026-11-02" } } ] },
+        { "label": "Saturday", "events": [ { "time": null, "end": null, "all_day": true, "title": "Half-term holidays", "calendar": "House", "redacted": false, "span": { "start_date": "2026-10-24", "end_date": "2026-11-02" } } ] },
+        { "label": "Sunday", "events": [ { "time": null, "end": null, "all_day": true, "title": "Half-term holidays", "calendar": "House", "redacted": false, "span": { "start_date": "2026-10-24", "end_date": "2026-11-02" } } ] }
+      ]
+    }
+  },
+  "tiles": {
+    "status": "ok",
+    "stale": false,
+    "data": [
+      { "id": "living-lights", "label": "Living room", "icon": "bulb", "kind": "toggle", "state": "off" },
+      { "id": "front-door", "label": "Front door", "icon": "lock", "kind": "toggle", "state": "on" }
+    ]
+  }
+}

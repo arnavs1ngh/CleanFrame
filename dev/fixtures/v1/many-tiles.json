@@ -1,0 +1,54 @@
+{
+  "meta": { "version": 1, "generated_at": "2026-10-24T18:32:00Z", "refresh_after_s": 60 },
+  "weather": {
+    "status": "ok",
+    "stale": false,
+    "data": {
+      "now": { "temp_c": 12, "icon": "cloudy", "label": "Cloudy" },
+      "today": { "high_c": 14, "low_c": 8 },
+      "next_hours": [ { "time": "19:00", "temp_c": 11, "icon": "cloudy" } ]
+    }
+  },
+  "calendar": {
+    "status": "ok",
+    "stale": false,
+    "data": {
+      "days": [
+        { "label": "Today", "events": [] },
+        { "label": "Tomorrow", "events": [] },
+        { "label": "Wednesday", "events": [] },
+        { "label": "Thursday", "events": [] },
+        { "label": "Friday", "events": [] },
+        { "label": "Saturday", "events": [] },
+        { "label": "Sunday", "events": [] }
+      ]
+    }
+  },
+  "tiles": {
+    "status": "ok",
+    "stale": false,
+    "data": [
+      { "id": "living-lights", "label": "Living room", "icon": "bulb", "kind": "toggle", "state": "on" },
+      { "id": "kitchen-lights", "label": "Kitchen", "icon": "bulb", "kind": "toggle", "state": "off" },
+      { "id": "bedroom-lights", "label": "Bedroom", "icon": "bulb", "kind": "toggle", "state": "off" },
+      { "id": "hallway-lights", "label": "Hallway", "icon": "bulb", "kind": "toggle", "state": "on" },
+      { "id": "study-lights", "label": "Study", "icon": "bulb", "kind": "toggle", "state": "off" },
+      { "id": "garden-lights", "label": "Garden", "icon": "bulb", "kind": "toggle", "state": "off" },
+      { "id": "front-door", "label": "Front door", "icon": "lock", "kind": "toggle", "state": "on" },
+      { "id": "back-door", "label": "Back door", "icon": "lock", "kind": "toggle", "state": "on" },
+      { "id": "garage-door", "label": "Garage", "icon": "lock", "kind": "toggle", "state": "off" },
+      { "id": "thermostat-main", "label": "Thermostat", "icon": "thermostat", "kind": "toggle", "state": "on" },
+      { "id": "heating-boost", "label": "Heating boost", "icon": "thermostat", "kind": "button", "state": null },
+      { "id": "living-blinds", "label": "Living room blinds", "icon": "blinds", "kind": "toggle", "state": "off" },
+      { "id": "bedroom-blinds", "label": "Bedroom blinds", "icon": "blinds", "kind": "toggle", "state": "on" },
+      { "id": "living-fan", "label": "Living room fan", "icon": "fan", "kind": "toggle", "state": "off" },
+      { "id": "study-plug", "label": "Study desk plug", "icon": "plug", "kind": "toggle", "state": "on" },
+      { "id": "living-tv", "label": "Living room TV", "icon": "tv", "kind": "toggle", "state": "off" },
+      { "id": "kitchen-speaker", "label": "Kitchen speaker", "icon": "speaker", "kind": "toggle", "state": "off" },
+      { "id": "front-camera", "label": "Front camera", "icon": "camera", "kind": "toggle", "state": "on" },
+      { "id": "movie-scene", "label": "Movie night", "icon": "scene", "kind": "scene", "state": null },
+      { "id": "morning-scene", "label": "Good morning", "icon": "scene", "kind": "scene", "state": null },
+      { "id": "away-scene", "label": "Away mode", "icon": "scene", "kind": "scene", "state": null }
+    ]
+  }
+}

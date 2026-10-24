@@ -1,0 +1,50 @@
+{
+  "meta": { "version": 1, "generated_at": "2026-10-24T18:32:00Z", "refresh_after_s": 60 },
+  "weather": {
+    "status": "ok",
+    "stale": false,
+    "data": {
+      "now": { "temp_c": 13, "icon": "thunderstorm", "label": "Severe thunderstorms with large hail expected overnight" },
+      "today": { "high_c": 15, "low_c": 9 },
+      "next_hours": [
+        { "time": "19:00", "temp_c": 12, "icon": "thunderstorm" },
+        { "time": "20:00", "temp_c": 11, "icon": "rain" }
+      ]
+    }
+  },
+  "calendar": {
+    "status": "ok",
+    "stale": false,
+    "data": {
+      "days": [
+        {
+          "label": "Today",
+          "events": [
+            { "time": "19:30", "end": "21:00", "all_day": false, "title": "Extended family dinner with the Okafor-Whitfields and the new neighbours from number fourteen", "calendar": "House", "redacted": false },
+            { "time": "21:30", "end": "22:00", "all_day": false, "title": "Quarterly household budget and renovation planning review", "calendar": "House", "redacted": false }
+          ]
+        },
+        {
+          "label": "Tomorrow",
+          "events": [
+            { "time": "09:00", "end": "17:00", "all_day": false, "title": "Annual all-hands offsite and strategic planning workshop", "calendar": "Work", "redacted": false }
+          ]
+        },
+        { "label": "Wednesday", "events": [] },
+        { "label": "Thursday", "events": [] },
+        { "label": "Friday", "events": [] },
+        { "label": "Saturday", "events": [] },
+        { "label": "Sunday", "events": [] }
+      ]
+    }
+  },
+  "tiles": {
+    "status": "ok",
+    "stale": false,
+    "data": [
+      { "id": "living-lights", "label": "Living room and adjoining conservatory lights", "icon": "bulb", "kind": "toggle", "state": "on" },
+      { "id": "garage-door", "label": "Garage and side gate access control", "icon": "lock", "kind": "toggle", "state": "off" },
+      { "id": "movie-scene", "label": "Friday night movie marathon scene with dimmed hallway", "icon": "scene", "kind": "scene", "state": null }
+    ]
+  }
+}
