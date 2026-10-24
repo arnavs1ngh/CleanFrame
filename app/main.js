@@ -1153,6 +1153,15 @@
     }
     calPanel.className = 'cal-panel' + (snap.stale || c.stale ? ' is-stale' : '');
     setHTML(calRows, days.map(function (day) { return calendarDayHtml(day, seenSpans); }).join(''));
+    syncCalendarGeometry();
+  }
+  function syncCalendarGeometry() {
+    if (S.c.layout !== 'list') { calPanel.style.width = calPanel.style.top = calPanel.style.height = ''; return; }
+    // Match the clock/weather column's width, and fill the gap between it and the controls exactly.
+    var top = caption.offsetTop + caption.offsetHeight + 24, bottom = utilsEl.offsetTop - 24;
+    calPanel.style.width = caption.offsetWidth + 'px';
+    calPanel.style.top = top + 'px';
+    calPanel.style.height = Math.max(0, bottom - top) + 'px';
   }
 
   function clockText() {
