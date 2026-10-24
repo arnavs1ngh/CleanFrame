@@ -918,13 +918,12 @@ try {
     check('Opening the popup did not swallow the short-press toggle underneath it', current.__houseApi.actionCalls.length === 1, current.__houseApi.actionCalls);
     const title = await current.locator('.light-title').textContent();
     check('Popup title shows the tile label', title === 'Living room', title);
-    check('Brightness is the first focused zone', (await current.locator('.light-row').getAttribute('class')).includes('is-focus'));
+    check('Brightness is the first focused zone', (await current.locator('.light-row').first().getAttribute('class')).includes('is-focus'));
 
     for (let i = 0; i < 3; i++) await nav('right'); // brightness 60 -> 75
-    await nav('down'); // mode zone
-    await nav('right'); // white -> colour
-    await nav('down'); // detail zone (swatches)
-    await nav('right'); // pick a swatch
+    await nav('down'); // white zone
+    await nav('down'); // swatches zone
+    await nav('right'); // pick a swatch - sets colour mode without a separate tab
     await current.waitForTimeout(900); // past the debounce
     const committed = current.__houseApi.actionCalls.at(-1);
     check('Adjustments debounce into a single action carrying brightness + colour together',

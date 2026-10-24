@@ -1012,7 +1012,7 @@
     point: function (t, z, i) { if (z === 'act') { t.f.b = i; this.key(t, 'ok'); } }
   };
   /* ---------- Light panel (brightness/colour, opened by long-pressing the Lights control) ---------- */
-  var LIGHT_ZONES = ['brightness', 'mode', 'detail'], lightCommitTimer = null;
+  var LIGHT_ZONES = ['brightness', 'white', 'swatches'], lightCommitTimer = null;
   function rgbToHex(rgb) { return '#' + ['r', 'g', 'b'].map(function (c) { return clamp(Math.round(rgb[c] || 0), 0, 255).toString(16).replace(/^(.)$/, '0$1'); }).join(''); }
   function hexToRgb(hex) { return { r: parseInt(hex.slice(1, 3), 16), g: parseInt(hex.slice(3, 5), 16), b: parseInt(hex.slice(5, 7), 16) }; }
   function lightTouch(t) {
@@ -1040,17 +1040,17 @@
       if (k === 'down' && zi < LIGHT_ZONES.length - 1) { t.f.zone = LIGHT_ZONES[zi + 1]; return; }
       if (k !== 'left' && k !== 'right') return;
       if (t.f.zone === 'brightness') { t.brightness = clamp(t.brightness + (k === 'right' ? LIGHT_BRIGHT_STEP : -LIGHT_BRIGHT_STEP), 0, 100); lightTouch(t); }
-      else if (t.f.zone === 'mode') { t.colorMode = t.colorMode === 'color' ? 'white' : 'color'; lightTouch(t); }
-      else if (t.f.zone === 'detail' && t.colorMode === 'color') {
+      else if (t.f.zone === 'white') { t.colorTempK = clamp(t.colorTempK + (k === 'right' ? LIGHT_TEMP_STEP : -LIGHT_TEMP_STEP), LIGHT_TEMP_MIN, LIGHT_TEMP_MAX); t.colorMode = 'white'; lightTouch(t); }
+      else if (t.f.zone === 'swatches') {
         swatches = LIGHT_SWATCHES; idx = swatches.indexOf(rgbToHex(t.rgb));
         t.rgb = hexToRgb(swatches[clamp((idx < 0 ? 0 : idx) + (k === 'right' ? 1 : -1), 0, swatches.length - 1)]);
+        t.colorMode = 'color';
         lightTouch(t);
-      } else if (t.f.zone === 'detail') { t.colorTempK = clamp(t.colorTempK + (k === 'right' ? LIGHT_TEMP_STEP : -LIGHT_TEMP_STEP), LIGHT_TEMP_MIN, LIGHT_TEMP_MAX); lightTouch(t); }
+      }
     },
     point: function (t, z, i) {
       if (z === 'zone') t.f.zone = LIGHT_ZONES[i];
-      else if (z === 'mode') { t.f.zone = 'mode'; t.colorMode = i === 0 ? 'color' : 'white'; lightTouch(t); }
-      else if (z === 'swatch') { t.f.zone = 'detail'; t.rgb = hexToRgb(LIGHT_SWATCHES[i]); lightTouch(t); }
+      else if (z === 'swatch') { t.f.zone = 'swatches'; t.rgb = hexToRgb(LIGHT_SWATCHES[i]); t.colorMode = 'color'; lightTouch(t); }
     }
   };
 
@@ -1685,8 +1685,8 @@
     light: function () {
       return '<h2 class="msg-title light-title" data-slot="title"></h2>'
         + '<button type="button" tabindex="-1" class="light-row" data-slot="brightnessRow" data-z="zone" data-i="0" data-action="light.zone.brightness"><span class="light-row-label">Brightness</span><div class="light-slider" data-slot="brightnessSlider"></div><span class="light-row-value" data-slot="brightnessValue"></span></button>'
-        + '<div class="light-modes" data-slot="modes"></div>'
-        + '<div class="light-detail" data-slot="detail"></div>'
+        + '<button type="button" tabindex="-1" class="light-row" data-slot="whiteRow" data-z="zone" data-i="1" data-action="light.zone.white"><span class="light-row-label">White</span><div class="light-temp-track" data-slot="tempTrack"></div><span class="light-row-value" data-slot="tempValue"></span></button>'
+        + '<div class="light-swatches" data-slot="swatches"></div>'
         + '<p class="light-hint" data-slot="hint" aria-live="polite"></p>';
     }
   };
@@ -1789,27 +1789,21 @@
       }).join(''));
     },
     light: function (t, el) {
-      var tile = quickTile() || {}, bFocus = t.f.zone === 'brightness', mFocus = t.f.zone === 'mode', dFocus = t.f.zone === 'detail', pct;
+      var tile = quickTile() || {}, bFocus = t.f.zone === 'brightness', wFocus = t.f.zone === 'white', sFocus = t.f.zone === 'swatches', pct;
       setHTML(el.title, esc(tile.label || UTIL.light[0]));
       el.brightnessRow.className = 'light-row' + (bFocus ? ' is-focus' : '');
       setHTML(el.brightnessSlider, '<div class="light-slider-fill" style="width:' + t.brightness + '%"></div>');
       setHTML(el.brightnessValue, t.brightness + '%');
-      el.modes.className = 'light-modes' + (mFocus ? ' is-focus' : '');
-      setHTML(el.modes, ['color', 'white'].map(function (m, i) {
-        return '<button type="button" tabindex="-1" class="light-mode-btn' + (t.colorMode === m ? ' is-selected' : '') + (mFocus && t.colorMode === m ? ' is-focus' : '')
-          + '" data-z="mode" data-i="' + i + '" data-action="light.mode.' + m + '">' + (m === 'color' ? 'Colour' : 'White') + '</button>';
+      el.whiteRow.className = 'light-row' + (wFocus ? ' is-focus' : '');
+      pct = (t.colorTempK - LIGHT_TEMP_MIN) / (LIGHT_TEMP_MAX - LIGHT_TEMP_MIN) * 100;
+      setHTML(el.tempTrack, '<div class="light-temp-fill" style="left:' + pct + '%"></div>');
+      setHTML(el.tempValue, t.colorTempK + 'K');
+      el.swatches.className = 'light-swatches' + (sFocus ? ' is-focus' : '');
+      setHTML(el.swatches, LIGHT_SWATCHES.map(function (hex, i) {
+        var selected = rgbToHex(t.rgb) === hex;
+        return '<button type="button" tabindex="-1" class="light-swatch' + (selected ? ' is-selected' : '') + (sFocus && selected ? ' is-focus' : '')
+          + '" style="background:' + hex + '" data-z="swatch" data-i="' + i + '" data-action="light.swatch.' + i + '" aria-label="Colour ' + (i + 1) + '"></button>';
       }).join(''));
-      el.detail.className = 'light-detail' + (dFocus ? ' is-focus' : '');
-      if (t.colorMode === 'color') {
-        setHTML(el.detail, LIGHT_SWATCHES.map(function (hex, i) {
-          var selected = rgbToHex(t.rgb) === hex;
-          return '<button type="button" tabindex="-1" class="light-swatch' + (selected ? ' is-selected' : '') + (dFocus && selected ? ' is-focus' : '')
-            + '" style="background:' + hex + '" data-z="swatch" data-i="' + i + '" data-action="light.swatch.' + i + '" aria-label="Colour ' + (i + 1) + '"></button>';
-        }).join(''));
-      } else {
-        pct = (t.colorTempK - LIGHT_TEMP_MIN) / (LIGHT_TEMP_MAX - LIGHT_TEMP_MIN) * 100;
-        setHTML(el.detail, '<div class="light-temp-track"><div class="light-temp-fill" style="left:' + pct + '%"></div></div><span class="light-row-value">' + t.colorTempK + 'K</span>');
-      }
       setHTML(el.hint, t.dirty ? 'Saving…' : '');
     }
   };
