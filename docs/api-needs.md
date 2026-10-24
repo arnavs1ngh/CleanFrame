@@ -8,6 +8,17 @@ here: field, example, why the UI needs it, and whether house-api or the TV
 should compute it. This file plus the final `dev/fixtures/v1/*.json` are the
 house-api spec at the end of this round.
 
+## Status at the end of this round
+
+Built and verified against the mock: client plumbing (`app/house-api.js`,
+polling/backoff/cache/actions), the weather strip, and the always-visible
+calendar panel - all exercising `weather` and `calendar` from the shape
+below. **Not reached:** the `tiles` section has no consuming UI yet (the
+old webhook-based Home Assistant control/panel in `app/ha.js` and
+`app/main.js` is still in place, untouched) and the real bundled-icon
+pipeline was never built - weather icons are still the inline placeholder
+set from Phase 3 piece 1. See the hand-off summary for what's left.
+
 ## Fields added beyond the starting shape
 
 ### `calendar.data.days[].events[].redacted` (boolean)
@@ -40,12 +51,15 @@ instead of a duplicate pill per day.
 Compute: house-api. It already resolves the source calendar's multi-day
 event boundaries; the TV just needs the two dates.
 
-## Icon vocabulary (provisional, finalised in Phase 3)
+## Icon vocabulary (provisional, not locked)
 
-The fixtures currently use this icon-name vocabulary. Phase 3 builds the
-actual bundled SVG set and will replace this section with the final,
-locked list that house-api may send - unknown names must fall back
-gracefully on the TV.
+The fixtures currently use this icon-name vocabulary. The weather half is
+live (rendered by the weather strip, as inline placeholder SVGs, not the
+bundled-file pipeline). The tiles half is unconsumed - logged here as the
+working vocabulary for whoever builds the Home Assistant panel next, not
+a finalised contract. Whatever ships, house-api must only send names the
+TV recognises, and unknown names must fall back gracefully rather than
+breaking the tile/weather row.
 
 - Weather: `clear-day`, `clear-night`, `partly-cloudy-day`,
   `partly-cloudy-night`, `cloudy`, `cloudy-rain`, `rain`, `thunderstorm`,
