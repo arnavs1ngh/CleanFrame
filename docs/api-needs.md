@@ -53,13 +53,12 @@ gracefully on the TV.
 - Tiles: `bulb`, `lock`, `thermostat`, `blinds`, `fan`, `plug`, `tv`,
   `speaker`, `camera`, `scene`
 
-## Open question raised during Phase 1, not yet answered
+## Dropped: remote colour-key (F1-F4) mapping
 
 The house-api-ui brief's Phase 1 item 6 ("map the colour keys to F1-F4 in
-the preview, matching the TV's ColorF0Red..ColorF3Blue handling") doesn't
-correspond to anything in the current codebase: there is no existing
-remote-color-key (`ColorF0Red`/`ColorF1Green`/`ColorF2Yellow`/`ColorF3Blue`)
-handling anywhere in `app/device.js` or `app/main.js`, no `tizen:privilege`
-for it in `config.xml`, and no feature in this house-api UI plan that would
-use a remote's colour buttons. Flagging this rather than inventing new
-remote-key handling speculatively - see the end-of-Phase-1 summary.
+the preview, matching the TV's ColorF0Red..ColorF3Blue handling") didn't
+correspond to anything in the codebase - no existing remote-color-key
+handling in `app/device.js` or `app/main.js`, no `tizen:privilege` for it
+in `config.xml`, and no feature in this house-api UI plan that would use
+a remote's colour buttons. Raised at the end of Phase 1; confirmed out of
+scope and dropped entirely, not implemented.
