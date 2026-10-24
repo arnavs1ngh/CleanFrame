@@ -413,14 +413,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .msg-line{position:absolute;left:140px;top:420px;max-width:1200px;font-size:36px;line-height:52px;color:var(--ink)}
 .msg-note{position:absolute;left:140px;top:540px;max-width:1200px;font-size:30px;line-height:42px;color:var(--mute)}
 .msg-acts{position:absolute;left:112px;top:660px;display:flex;gap:12px}
-.ha-rows{position:absolute;left:140px;top:360px;width:1500px;display:flex;flex-direction:column;gap:48px}
-.ha-row{display:flex;align-items:center;gap:32px}
-.ha-row-name{flex:none;width:560px;font-size:40px;line-height:48px;font-weight:500;letter-spacing:-.6px;color:var(--ink)}
-.ha-acts{display:flex;gap:16px}
-.ha-act{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
-.ha-btn{min-width:160px;justify-content:center}
-.ha-status{min-height:34px;font-size:26px;line-height:34px;color:var(--mute)}
-.ha-status.setting-error{color:var(--warn)}
+/* Light panel: brightness/colour, opened by long-pressing the Lights control. */
+.light-row{position:absolute;left:140px;top:420px;width:1500px;display:flex;align-items:center;gap:24px;padding:0}
+.light-row-label{flex:none;width:260px;font-size:34px;line-height:44px;font-weight:500;color:var(--ink)}
+.light-slider{flex:1;height:16px;border-radius:8px;background:var(--line);overflow:hidden}
+.light-slider-fill{height:100%;background:var(--ink);border-radius:8px}
+.light-row-value{flex:none;width:110px;text-align:right;font-size:30px;font-variant-numeric:tabular-nums;color:var(--mute)}
+.light-row.is-focus .light-slider{box-shadow:0 0 0 3px var(--solid)}
+.light-modes{position:absolute;left:140px;top:504px;display:flex;gap:16px}
+.light-mode-btn{height:64px;padding:0 32px;border-radius:32px;font-size:30px;font-weight:500;color:var(--mute);border:2px solid var(--line)}
+.light-mode-btn.is-selected{color:var(--ink);border-color:var(--ink)}
+.light-modes.is-focus .light-mode-btn.is-focus{background:var(--solid);color:var(--solid-ink);border-color:var(--solid)}
+.light-detail{position:absolute;left:140px;top:612px;width:1500px;display:flex;align-items:center;gap:18px}
+.light-swatch{width:72px;height:72px;border-radius:50%;border:3px solid transparent}
+.light-swatch.is-selected{border-color:var(--ink)}
+.light-detail.is-focus .light-swatch.is-focus{box-shadow:0 0 0 4px var(--solid)}
+.light-temp-track{position:relative;flex:1;height:24px;border-radius:12px;background:linear-gradient(to right,#ffb454,#dceeff)}
+.light-temp-fill{position:absolute;top:-6px;width:12px;height:36px;border-radius:6px;background:var(--ink);box-shadow:0 0 0 2px var(--ground);transform:translateX(-6px)}
+.light-detail.is-focus .light-temp-track{box-shadow:0 0 0 3px var(--solid)}
+.light-hint{position:absolute;left:140px;top:716px;font-size:26px;color:var(--mute);min-height:34px}
 
 @media (prefers-reduced-motion:reduce){
   .stage,.stage *{transition:none!important;animation:none!important}

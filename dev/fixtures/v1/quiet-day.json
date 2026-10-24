@@ -1,14 +1,33 @@
 {
-  "meta": { "version": 1, "generated_at": "2026-10-24T08:05:00Z", "refresh_after_s": 60 },
+  "meta": {
+    "version": 1,
+    "generated_at": "2026-10-24T08:05:00Z",
+    "refresh_after_s": 60
+  },
   "weather": {
     "status": "ok",
     "stale": false,
     "data": {
-      "now": { "temp_c": 9, "icon": "partly-cloudy-day", "label": "Partly cloudy" },
-      "today": { "high_c": 15, "low_c": 6 },
+      "now": {
+        "temp_c": 9,
+        "icon": "partly-cloudy-day",
+        "label": "Partly cloudy"
+      },
+      "today": {
+        "high_c": 15,
+        "low_c": 6
+      },
       "next_hours": [
-        { "time": "09:00", "temp_c": 10, "icon": "partly-cloudy-day" },
-        { "time": "10:00", "temp_c": 11, "icon": "clear-day" }
+        {
+          "time": "09:00",
+          "temp_c": 10,
+          "icon": "partly-cloudy-day"
+        },
+        {
+          "time": "10:00",
+          "temp_c": 11,
+          "icon": "clear-day"
+        }
       ]
     }
   },
@@ -17,13 +36,34 @@
     "stale": false,
     "data": {
       "days": [
-        { "label": "Today", "events": [] },
-        { "label": "Tomorrow", "events": [] },
-        { "label": "Wednesday", "events": [] },
-        { "label": "Thursday", "events": [] },
-        { "label": "Friday", "events": [] },
-        { "label": "Saturday", "events": [] },
-        { "label": "Sunday", "events": [] }
+        {
+          "label": "Today",
+          "events": []
+        },
+        {
+          "label": "Tomorrow",
+          "events": []
+        },
+        {
+          "label": "Wednesday",
+          "events": []
+        },
+        {
+          "label": "Thursday",
+          "events": []
+        },
+        {
+          "label": "Friday",
+          "events": []
+        },
+        {
+          "label": "Saturday",
+          "events": []
+        },
+        {
+          "label": "Sunday",
+          "events": []
+        }
       ]
     }
   },
@@ -31,9 +71,36 @@
     "status": "ok",
     "stale": false,
     "data": [
-      { "id": "living-lights", "label": "Living room", "icon": "bulb", "kind": "toggle", "state": "off" },
-      { "id": "kitchen-lights", "label": "Kitchen", "icon": "bulb", "kind": "toggle", "state": "off" },
-      { "id": "front-door", "label": "Front door", "icon": "lock", "kind": "toggle", "state": "on" }
+      {
+        "id": "living-lights",
+        "label": "Living room",
+        "icon": "bulb",
+        "kind": "toggle",
+        "state": "off",
+        "quick": true,
+        "brightness": 0,
+        "color_mode": "white",
+        "rgb": {
+          "r": 255,
+          "g": 255,
+          "b": 255
+        },
+        "color_temp_k": 4000
+      },
+      {
+        "id": "kitchen-lights",
+        "label": "Kitchen",
+        "icon": "bulb",
+        "kind": "toggle",
+        "state": "off"
+      },
+      {
+        "id": "front-door",
+        "label": "Front door",
+        "icon": "lock",
+        "kind": "toggle",
+        "state": "on"
+      }
     ]
   }
 }

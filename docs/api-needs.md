@@ -11,13 +11,15 @@ house-api spec at the end of this round.
 ## Status at the end of this round
 
 Built and verified against the mock: client plumbing (`app/house-api.js`,
-polling/backoff/cache/actions), the weather strip, and the always-visible
-calendar panel - all exercising `weather` and `calendar` from the shape
-below. **Not reached:** the `tiles` section has no consuming UI yet (the
-old webhook-based Home Assistant control/panel in `app/ha.js` and
-`app/main.js` is still in place, untouched) and the real bundled-icon
-pipeline was never built - weather icons are still the inline placeholder
-set from Phase 3 piece 1. See the hand-off summary for what's left.
+polling/backoff/cache/actions, now with a request body on
+`POST /v1/actions/{id}`), the weather strip, the always-visible calendar
+panel, and a Lights quick-access control with a brightness/colour popup -
+exercising `weather`, `calendar` and now `tiles` from the shape below. The
+old webhook-based Home Assistant integration (`app/ha.js`,
+`app/ha-config.js`) was fully removed, including its `config.xml`
+`<access>`/`internet` entries - see `docs/home-assistant.md`. **Not
+reached:** the real bundled-icon pipeline - weather and tile icons are
+still the inline placeholder set from Phase 3 piece 1.
 
 ## Fields added beyond the starting shape
 
@@ -50,6 +52,85 @@ instead of a duplicate pill per day.
 
 Compute: house-api. It already resolves the source calendar's multi-day
 event boundaries; the TV just needs the two dates.
+
+### `tiles.data[].quick` (boolean, optional)
+
+Example: `{ "id": "living-lights", "label": "Living room", ..., "quick": true }`
+
+Why: the Home-row "Lights" control is a single quick-access item, not the
+full tile list - it needs to know *which* tile to represent without the UI
+guessing ("first toggle tile" breaks the moment there's more than one
+light; see `dev/fixtures/v1/many-tiles.json`, which has six). Set on
+exactly one tile. If none is flagged, the control still shows (when
+house-api is configured) but generically, with no tile behind it.
+
+Compute: house-api. It (or whoever configures it) decides which single
+device deserves one-press access from Home; the TV just renders whichever
+tile has the flag.
+
+### `tiles.data[].brightness` (number 0-100, optional)
+
+Example: `{ "brightness": 72 }`
+
+Why: the Lights control's long-press popup needs a dimmable tile's current
+level to show a meaningful slider position, and to know a tile *is*
+dimmable at all (its absence means no brightness row).
+
+Compute: TV renders the slider; house-api supplies the current value and
+must accept it back in the `POST /v1/actions/{id}` body (see below).
+
+### `tiles.data[].color_mode` (`"color"` | `"white"`, optional)
+
+Example: `{ "color_mode": "white" }`
+
+Why: a colour-capable light is in exactly one of two states at a time -
+showing a set RGB colour, or a white colour-temperature. The popup needs
+to know which to default to, and which of `rgb`/`color_temp_k` is
+currently "live", rather than guessing from which field happens to be
+present. Its absence means the tile has no colour control at all (only
+`brightness`, or neither - a plain toggle).
+
+Compute: house-api. It reflects whatever mode the light is actually in.
+
+### `tiles.data[].rgb` (`{r,g,b}`, 0-255 each, optional)
+
+Example: `{ "rgb": { "r": 255, "g": 196, "b": 120 } }`
+
+Why: lets the popup highlight the current colour among its swatch presets
+(and carries the last-set colour through a mode switch, so flipping back
+to Colour from White doesn't lose it).
+
+Compute: house-api, mirroring the light's actual last-set colour.
+
+### `tiles.data[].color_temp_k` (number, Kelvin, optional)
+
+Example: `{ "color_temp_k": 4000 }`
+
+Why: positions the warm↔cool slider in White mode. The UI assumes a
+2200-6500K range (common for consumer bulbs) with no explicit bounds field
+from the server yet - if real bulbs need a narrower/wider range, house-api
+should also send `tiles.data[].color_temp_range: {min, max}`, not
+implemented here since the fixtures didn't need it.
+
+Compute: house-api, mirroring the light's actual colour temperature.
+
+### `POST /v1/actions/{id}` now takes an optional JSON body
+
+Example: `{ "brightness": 72, "color_mode": "color", "rgb": { "r": 255, "g": 196, "b": 120 } }`
+
+Why: the original shape was "run an allowlisted action, no params" (fire,
+like the old webhooks). Brightness/colour adjustment needs to carry the
+new value. The UI debounces rapid adjustments (brightness, colour, mode
+all changing within ~700ms) into a single request carrying whatever
+changed, rather than one request per slider tick - a plain toggle/
+scene/button press still sends no body at all, same as before. The mock
+(`dev/mock.py`) merges whichever of `brightness`/`color_mode`/`rgb`/
+`color_temp_k` are present onto the tile and returns it; a tile with no
+body sent still toggles its `state` as before.
+
+Compute: house-api must accept a partial update (only the fields that
+changed) and return the tile's full resulting state in `{ ok, tile }`, not
+require every field on every call.
 
 ## Icon vocabulary (provisional, not locked)
 

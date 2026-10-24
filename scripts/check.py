@@ -53,22 +53,6 @@ for wall in walls:
 for icon in ['netflix', 'youtube', 'primevideo', 'spotify', 'jellyfin', 'bbc', 'itvx', 'channel4', 'art', 'apps', 'settings', 'bulb']:
     assert (app / ('assets/icons/' + icon + '.svg')).is_file(), 'Missing icon: ' + icon
 
-# Home Assistant: the example config is a template only and must stay out of the packaged widget.
-assert (app / 'ha-config.example.js').is_file(), 'Missing app/ha-config.example.js template'
-assert not is_runtime_source('ha-config.example.js'), 'ha-config.example.js must be excluded from the packaged widget'
-# Wiring is live: ha-config.js is now required (caught above via the index.html reference scan,
-# since it's no longer exempted), config.xml must declare internet + a scoped (non-wildcard)
-# access origin, and it must match ha-config.js's own base - not some other host.
-manifest_text = (app / 'config.xml').read_text()
-assert 'http://tizen.org/privilege/internet' in manifest_text, 'Missing internet privilege for Home Assistant'
-access_match = re.search(r'<access\s+origin="([^"]+)"\s+subdomains="(true|false)"', manifest_text)
-assert access_match, 'Missing scoped <access> entry for Home Assistant'
-assert access_match.group(1) not in ('*', ''), 'Access origin must be scoped, not wildcarded'
-assert access_match.group(2) == 'false', 'Access origin should not blanket-allow subdomains'
-ha_config_text = (app / 'ha-config.js').read_text()
-base_match = re.search(r'base\s*:\s*[\'"]([^\'"]+)[\'"]', ha_config_text)
-assert base_match and base_match.group(1).startswith(access_match.group(1)), 'config.xml access origin does not match ha-config.js base'
-
 # house-api: pre-wiring dev tooling only. The example config is a template and must
 # stay out of the packaged widget; dev/ (mock server, fixtures) lives outside app/ and
 # must never end up in a built widget either.

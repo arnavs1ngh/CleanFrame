@@ -108,7 +108,10 @@
     if (!document.hidden) fetchHome();
   }
 
-  function fireAction(tileId, done) {
+  /* body is optional: omit (or pass null) for a plain fire (toggle/scene/button); pass a plain
+     object (e.g. { brightness: 72 }) to adjust a tile's settable fields. Always JSON. */
+  function fireAction(tileId, body, done) {
+    if (typeof body === 'function') { done = body; body = null; } // allow the old 2-arg call shape
     if (!configured()) { done({ message: 'house-api is not configured.' }); return; }
     if (actionsInFlight[tileId]) return; // ignore repeat presses while in flight
     actionsInFlight[tileId] = true;
@@ -123,16 +126,17 @@
       xhr = new XMLHttpRequest();
       xhr.open('POST', base() + '/v1/actions/' + encodeURIComponent(tileId), true);
       xhr.timeout = ACTION_TIMEOUT_MS;
+      if (body) xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.onload = function () {
-        var body;
+        var parsed;
         if (xhr.status < 200 || xhr.status >= 300) { finish({ message: 'Couldn’t reach house-api.' }); return; }
-        try { body = JSON.parse(xhr.responseText); } catch (e) { finish({ message: 'Couldn’t reach house-api.' }); return; }
-        if (!body || body.ok !== true) { finish({ message: 'Action failed.' }, body && body.tile); return; }
-        finish(null, body.tile);
+        try { parsed = JSON.parse(xhr.responseText); } catch (e) { finish({ message: 'Couldn’t reach house-api.' }); return; }
+        if (!parsed || parsed.ok !== true) { finish({ message: 'Action failed.' }, parsed && parsed.tile); return; }
+        finish(null, parsed.tile);
       };
       xhr.onerror = function () { finish({ message: 'Couldn’t reach house-api.' }); };
       xhr.ontimeout = function () { finish({ message: 'Couldn’t reach house-api.' }); };
-      xhr.send();
+      xhr.send(body ? JSON.stringify(body) : null);
     } catch (e) { finish({ message: 'Couldn’t reach house-api.' }); }
   }
 

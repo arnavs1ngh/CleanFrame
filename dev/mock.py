@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / 'dev/fixtures/v1'
 
-_overrides = {}  # (scenario, tile_id) -> 'on' | 'off', reset when the preview process restarts
+_overrides = {}  # (scenario, tile_id) -> dict of field overrides, reset when the preview process restarts
 
 
 def _load_fixture(scenario):
@@ -30,7 +30,7 @@ def _apply_overrides(scenario, data):
         for tile in tiles:
             key = (scenario, tile.get('id'))
             if key in _overrides:
-                tile['state'] = _overrides[key]
+                tile.update(_overrides[key])
     return data
 
 
@@ -87,8 +87,16 @@ def handle_get_home(handler, query):
     handler.wfile.write(body)
 
 
-def handle_post_action(handler, tile_id, query):
-    """POST /mock/v1/actions/{id}?scenario=<name>&delay=<ms>&fail=<0|1>"""
+ADJUSTABLE_FIELDS = ('brightness', 'color_mode', 'rgb', 'color_temp_k')
+
+
+def handle_post_action(handler, tile_id, query, body):
+    """POST /mock/v1/actions/{id}?scenario=<name>&delay=<ms>&fail=<0|1>
+
+    body is the parsed JSON request body (or {} for a plain fire-and-forget
+    toggle/scene/button press): {"brightness": 72} / {"color_temp_k": 3200} /
+    {"rgb": {"r": 255, "g": 120, "b": 80}, "color_mode": "color"}.
+    """
     scenario = query.get('scenario', ['normal'])[0]
     delay_ms, fail = _knobs(query)
     if delay_ms:
@@ -102,11 +110,15 @@ def handle_post_action(handler, tile_id, query):
     tile = dict(tile)
     key = (scenario, tile_id)
     if key in _overrides:
-        tile['state'] = _overrides[key]
+        tile.update(_overrides[key])
     if fail:
         _send_json(handler, 200, {'ok': False, 'tile': tile})
         return
-    if tile.get('kind') == 'toggle':
-        tile['state'] = 'off' if tile.get('state') == 'on' else 'on'
-        _overrides[key] = tile['state']
+    changes = {k: v for k, v in (body or {}).items() if k in ADJUSTABLE_FIELDS}
+    if changes:
+        tile.update(changes)
+    elif tile.get('kind') == 'toggle':
+        changes = {'state': 'off' if tile.get('state') == 'on' else 'on'}
+        tile.update(changes)
+    _overrides.setdefault(key, {}).update(changes)
     _send_json(handler, 200, {'ok': True, 'tile': tile})

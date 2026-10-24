@@ -1,14 +1,33 @@
 {
-  "meta": { "version": 1, "generated_at": "2026-10-25T01:15:00Z", "refresh_after_s": 60 },
+  "meta": {
+    "version": 1,
+    "generated_at": "2026-10-25T01:15:00Z",
+    "refresh_after_s": 60
+  },
   "weather": {
     "status": "ok",
     "stale": false,
     "data": {
-      "now": { "temp_c": 6, "icon": "clear-night", "label": "Clear" },
-      "today": { "high_c": 14, "low_c": 4 },
+      "now": {
+        "temp_c": 6,
+        "icon": "clear-night",
+        "label": "Clear"
+      },
+      "today": {
+        "high_c": 14,
+        "low_c": 4
+      },
       "next_hours": [
-        { "time": "02:00", "temp_c": 5, "icon": "clear-night" },
-        { "time": "03:00", "temp_c": 5, "icon": "fog" }
+        {
+          "time": "02:00",
+          "temp_c": 5,
+          "icon": "clear-night"
+        },
+        {
+          "time": "03:00",
+          "temp_c": 5,
+          "icon": "fog"
+        }
       ]
     }
   },
@@ -17,18 +36,43 @@
     "stale": false,
     "data": {
       "days": [
-        { "label": "Today", "events": [] },
+        {
+          "label": "Today",
+          "events": []
+        },
         {
           "label": "Tomorrow",
           "events": [
-            { "time": "09:00", "end": "09:30", "all_day": false, "title": "Bins out", "calendar": "House", "redacted": false }
+            {
+              "time": "09:00",
+              "end": "09:30",
+              "all_day": false,
+              "title": "Bins out",
+              "calendar": "House",
+              "redacted": false
+            }
           ]
         },
-        { "label": "Wednesday", "events": [] },
-        { "label": "Thursday", "events": [] },
-        { "label": "Friday", "events": [] },
-        { "label": "Saturday", "events": [] },
-        { "label": "Sunday", "events": [] }
+        {
+          "label": "Wednesday",
+          "events": []
+        },
+        {
+          "label": "Thursday",
+          "events": []
+        },
+        {
+          "label": "Friday",
+          "events": []
+        },
+        {
+          "label": "Saturday",
+          "events": []
+        },
+        {
+          "label": "Sunday",
+          "events": []
+        }
       ]
     }
   },
@@ -36,9 +80,36 @@
     "status": "ok",
     "stale": false,
     "data": [
-      { "id": "living-lights", "label": "Living room", "icon": "bulb", "kind": "toggle", "state": "off" },
-      { "id": "front-door", "label": "Front door", "icon": "lock", "kind": "toggle", "state": "on" },
-      { "id": "night-scene", "label": "Goodnight", "icon": "scene", "kind": "scene", "state": null }
+      {
+        "id": "living-lights",
+        "label": "Living room",
+        "icon": "bulb",
+        "kind": "toggle",
+        "state": "off",
+        "quick": true,
+        "brightness": 20,
+        "color_mode": "white",
+        "rgb": {
+          "r": 255,
+          "g": 255,
+          "b": 255
+        },
+        "color_temp_k": 2400
+      },
+      {
+        "id": "front-door",
+        "label": "Front door",
+        "icon": "lock",
+        "kind": "toggle",
+        "state": "on"
+      },
+      {
+        "id": "night-scene",
+        "label": "Goodnight",
+        "icon": "scene",
+        "kind": "scene",
+        "state": null
+      }
     ]
   }
 }

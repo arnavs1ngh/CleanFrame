@@ -1,15 +1,38 @@
 {
-  "meta": { "version": 1, "generated_at": "2026-10-24T18:32:00Z", "refresh_after_s": 60 },
+  "meta": {
+    "version": 1,
+    "generated_at": "2026-10-24T18:32:00Z",
+    "refresh_after_s": 60
+  },
   "weather": {
     "status": "ok",
     "stale": false,
     "data": {
-      "now": { "temp_c": 12, "icon": "cloudy-rain", "label": "Light rain" },
-      "today": { "high_c": 14, "low_c": 8 },
+      "now": {
+        "temp_c": 12,
+        "icon": "cloudy-rain",
+        "label": "Light rain"
+      },
+      "today": {
+        "high_c": 14,
+        "low_c": 8
+      },
       "next_hours": [
-        { "time": "19:00", "temp_c": 11, "icon": "rain" },
-        { "time": "20:00", "temp_c": 10, "icon": "cloudy" },
-        { "time": "21:00", "temp_c": 9, "icon": "cloudy" }
+        {
+          "time": "19:00",
+          "temp_c": 11,
+          "icon": "rain"
+        },
+        {
+          "time": "20:00",
+          "temp_c": 10,
+          "icon": "cloudy"
+        },
+        {
+          "time": "21:00",
+          "temp_c": 9,
+          "icon": "cloudy"
+        }
       ]
     }
   },
@@ -21,25 +44,58 @@
         {
           "label": "Today",
           "events": [
-            { "time": "19:30", "end": "21:00", "all_day": false, "title": "House dinner", "calendar": "House", "redacted": false }
+            {
+              "time": "19:30",
+              "end": "21:00",
+              "all_day": false,
+              "title": "House dinner",
+              "calendar": "House",
+              "redacted": false
+            }
           ]
         },
         {
           "label": "Tomorrow",
           "events": [
-            { "time": "09:00", "end": "09:30", "all_day": false, "title": "Bins out", "calendar": "House", "redacted": false }
+            {
+              "time": "09:00",
+              "end": "09:30",
+              "all_day": false,
+              "title": "Bins out",
+              "calendar": "House",
+              "redacted": false
+            }
           ]
         },
-        { "label": "Wednesday", "events": [] },
+        {
+          "label": "Wednesday",
+          "events": []
+        },
         {
           "label": "Thursday",
           "events": [
-            { "time": "18:00", "end": "19:00", "all_day": false, "title": "Book club", "calendar": "Personal", "redacted": false }
+            {
+              "time": "18:00",
+              "end": "19:00",
+              "all_day": false,
+              "title": "Book club",
+              "calendar": "Personal",
+              "redacted": false
+            }
           ]
         },
-        { "label": "Friday", "events": [] },
-        { "label": "Saturday", "events": [] },
-        { "label": "Sunday", "events": [] }
+        {
+          "label": "Friday",
+          "events": []
+        },
+        {
+          "label": "Saturday",
+          "events": []
+        },
+        {
+          "label": "Sunday",
+          "events": []
+        }
       ]
     }
   },
@@ -47,11 +103,50 @@
     "status": "ok",
     "stale": false,
     "data": [
-      { "id": "living-lights", "label": "Living room", "icon": "bulb", "kind": "toggle", "state": "on" },
-      { "id": "kitchen-lights", "label": "Kitchen", "icon": "bulb", "kind": "toggle", "state": "off" },
-      { "id": "front-door", "label": "Front door", "icon": "lock", "kind": "toggle", "state": "on" },
-      { "id": "movie-scene", "label": "Movie night", "icon": "scene", "kind": "scene", "state": null },
-      { "id": "heating-boost", "label": "Heating boost", "icon": "thermostat", "kind": "button", "state": null }
+      {
+        "id": "living-lights",
+        "label": "Living room",
+        "icon": "bulb",
+        "kind": "toggle",
+        "state": "on",
+        "quick": true,
+        "brightness": 85,
+        "color_mode": "color",
+        "rgb": {
+          "r": 255,
+          "g": 196,
+          "b": 120
+        },
+        "color_temp_k": 3000
+      },
+      {
+        "id": "kitchen-lights",
+        "label": "Kitchen",
+        "icon": "bulb",
+        "kind": "toggle",
+        "state": "off"
+      },
+      {
+        "id": "front-door",
+        "label": "Front door",
+        "icon": "lock",
+        "kind": "toggle",
+        "state": "on"
+      },
+      {
+        "id": "movie-scene",
+        "label": "Movie night",
+        "icon": "scene",
+        "kind": "scene",
+        "state": null
+      },
+      {
+        "id": "heating-boost",
+        "label": "Heating boost",
+        "icon": "thermostat",
+        "kind": "button",
+        "state": null
+      }
     ]
   }
 }

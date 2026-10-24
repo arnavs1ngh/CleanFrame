@@ -29,10 +29,9 @@ export default [
         tizen: 'readonly',
         Promise: 'readonly',
         // Globals shared across separate <script> tags loaded by app/index.html, not modules.
-        // HA_CONFIG/HOUSE_API_BASE are declared with `var` in their own config files and read
-        // via window.* elsewhere, so they don't need (and must not have) a global entry here.
+        // HOUSE_API_BASE is declared with `var` in its own config file and read via window.*
+        // elsewhere, so it doesn't need (and must not have) a global entry here.
         FrameDevice: 'readonly',
-        HomeAssistant: 'readonly',
         HouseAPI: 'readonly'
       }
     },

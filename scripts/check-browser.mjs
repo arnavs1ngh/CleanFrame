@@ -41,7 +41,7 @@ async function run(name, fn) {
 async function closePage() { if (current) { current.__closing = true; await current.close(); current = null; } }
 
 // Production still calls its unmodified device.js adapter.
-function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure, noFontAPI, storageFailure, ha }) {
+function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure, noFontAPI, storageFailure }) {
   if (!sessionStorage.getItem('__cleanframe_seeded')) {
     if (seed !== undefined) localStorage.setItem('cleanframe.home.v1', typeof seed === 'string' ? seed : JSON.stringify(seed));
     if (legacy !== undefined) localStorage.setItem('cleanframe.shore.v1', typeof legacy === 'string' ? legacy : JSON.stringify(legacy));
@@ -62,28 +62,6 @@ function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure,
     document.dispatchEvent(new Event('visibilitychange'));
   };
   if (noFontAPI) Object.defineProperty(document, 'fonts', { configurable: true, value: undefined });
-  // Home Assistant: fake HA_CONFIG and XMLHttpRequest, installed before ha-config.js/ha.js load.
-  // ha omitted entirely -> no HA_CONFIG at all, exercising the "hidden without config" path for real.
-  if (ha) {
-    window.HA_CONFIG = { base: 'http://qa.local:8123', actions: {
-      lightsOn: 'qa-lights-on', lightsOff: 'qa-lights-off',
-      jellyfinSyncOn: 'qa-jellyfin-on', jellyfinSyncOff: 'qa-jellyfin-off'
-    } };
-    window.__haCalls = [];
-    function FakeXHR() {}
-    FakeXHR.prototype.open = function (method, url) { this._url = url; };
-    FakeXHR.prototype.setRequestHeader = function () {};
-    FakeXHR.prototype.send = function () {
-      const self = this;
-      window.__haCalls.push(this._url);
-      if (ha === 'slow') return; // never resolves; ha.js's own 4s bounded() timeout wins
-      setTimeout(() => {
-        if (ha === 'fail') { self.status = 0; if (self.onerror) self.onerror(); }
-        else { self.status = 200; if (self.onload) self.onload(); }
-      }, 200); // slow enough that a test can reliably observe the "sending" state first
-    };
-    window.XMLHttpRequest = FakeXHR;
-  }
   if (!mock) return;
   window.__tv = { catalog, catalogFailure: !!catalogFailure, launchFailure: false, holdCatalog: false, pending: [], calls: [], catalogCalls: 0 };
   window.tizen = {
@@ -111,17 +89,37 @@ async function page(options = {}) {
   current = await preview.browser.newPage({ viewport: { width: 1920, height: 1080 } });
   const owner = current;
   current.setDefaultTimeout(10000);
-  // ha-config.js is private, gitignored and machine-specific - a real one may or may not exist
-  // on disk here. Tests must not depend on that: always serve it as missing, and let the `ha`
-  // option (via installHarness) inject a fake HA_CONFIG for tests that need it configured.
+  // ha-config.js no longer exists at all (the webhook approach was removed) - a browser profile
+  // might still probe for it, so keep this 404 deterministic rather than hitting the real FS.
   await current.route('**/ha-config.js', route => route.fulfill({ status: 404, body: '' }));
-  // house-api-config.js: same determinism concern, plus preview.py serves a dev-only default
-  // (HOUSE_API_BASE = '/mock') when no real file exists, which would make HouseAPI.start() fire
-  // a real background fetch during every test and pollute the `ha` option's shared FakeXHR
-  // call log. No house-api UI exists yet to test, so keep it unconfigured here; a dedicated
-  // option (mirroring `ha`) should mock it properly once there's real UI behind it.
-  await current.route('**/house-api-config.js', route => route.fulfill({ status: 404, body: '' }));
   const expected = ['ha-config.js', 'house-api-config.js'];
+  let houseApiState = null;
+  if (options.houseApi) {
+    houseApiState = { tile: { ...options.houseApi }, actionCalls: [] };
+    await current.route('**/house-api-config.js', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: "var HOUSE_API_BASE = '/qa-house-api';" }));
+    await current.route('**/qa-house-api/v1/home', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ meta: { version: 1, generated_at: new Date().toISOString(), refresh_after_s: 3600 },
+        weather: { status: 'error', stale: false, data: null }, calendar: { status: 'error', stale: false, data: null },
+        tiles: { status: 'ok', stale: false, data: [houseApiState.tile] } })
+    }));
+    await current.route('**/qa-house-api/v1/actions/**', async route => {
+      const raw = route.request().postData();
+      const body = raw ? JSON.parse(raw) : {};
+      houseApiState.actionCalls.push({ url: route.request().url(), body });
+      await new Promise(r => setTimeout(r, 150)); // slow enough that a test can observe "sending" and a repeat press in flight
+      if (body.fail) { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, tile: houseApiState.tile }) }); return; }
+      if ('brightness' in body || 'color_mode' in body) houseApiState.tile = { ...houseApiState.tile, ...body };
+      else houseApiState.tile = { ...houseApiState.tile, state: houseApiState.tile.state === 'on' ? 'off' : 'on' };
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, tile: houseApiState.tile }) });
+    });
+  } else {
+    // house-api-config.js: same determinism concern as ha-config.js, plus preview.py serves a
+    // dev-only default (HOUSE_API_BASE = '/mock') when no real file exists, which would make
+    // HouseAPI.start() fire a real background fetch during every test. Keep it unconfigured by
+    // default; pass `houseApi` (above) for tests that need a real tile behind it.
+    await current.route('**/house-api-config.js', route => route.fulfill({ status: 404, body: '' }));
+  }
   current.__expectedFailures = expected;
   current.on('pageerror', error => report.pageErrors.push({ section, error: error.message }));
   current.on('response', response => { if (response.status() >= 400 && !expected.some(s => response.url().includes(s))) report.pageErrors.push({ section, status: response.status(), url: response.url() }); });
@@ -134,6 +132,7 @@ async function page(options = {}) {
   await current.addInitScript(installHarness, { mock: true, catalog: CATALOG, minuteMs: 60000, seed: baseline(), ...options });
   await current.goto(preview.baseURL + '/home/');
   await ready();
+  current.__houseApi = houseApiState;
   await current.waitForLoadState('networkidle');
   return current;
 }
@@ -882,61 +881,60 @@ try {
     await nav('back'); await library();
     check('Browser All Apps has no installed fixtures', /TV/.test(await current.locator('#stage').innerText()) && !(await current.locator('[data-action^="apps.open."]').count()));
   });
-  await run('Home Assistant control', async () => {
-    await page(); // no ha option at all: no HA_CONFIG, nothing to configure anything with
+  await run('Lights control', async () => {
+    const QA_LIGHT = { id: 'qa-light', label: 'Living room', icon: 'bulb', kind: 'toggle', state: 'off', quick: true, brightness: 60, color_mode: 'white', color_temp_k: 4000, rgb: { r: 255, g: 255, b: 255 } };
+    await page(); // no houseApi option: nothing to configure anything with
     const noConfigUtils = await current.locator('.utils .u').allTextContents();
-    check('Lights control is absent without configuration', !noConfigUtils.includes('Lights'), noConfigUtils);
-    await scene('settings');
-    const noConfigActions = await call('actions');
-    check('Home Assistant settings row is absent without configuration', !noConfigActions.includes('settings.group.ha'), noConfigActions);
+    check('Lights control is absent without configuration', !noConfigUtils.some(t => /Living room|Lights/.test(t)), noConfigUtils);
     await closePage();
 
-    await page({ ha: 'ok' });
+    await page({ houseApi: QA_LIGHT });
     const utilNames = await current.locator('.utils .u').allTextContents();
-    check('Lights control appears first when configured', utilNames[0] === 'Lights', utilNames);
+    check('Lights control appears first, labelled from the tile', utilNames[0] === 'Living room', utilNames);
     await nav('up');
-    check('Lights control is focusable from Home', (await call('where')).focus === 'Lights');
-    await act('util.ha');
+    check('Lights control is focusable from Home', (await call('where')).focus === 'Living room');
+    await act('util.light');
     check('Pressing OK shows sending feedback', /Sending/.test(await current.locator('.utils .u').nth(0).textContent()));
-    await act('util.ha'); // repeat press while the first request is in flight
-    const callsDuringFlight = await current.evaluate(() => window.__haCalls.length);
-    check('Repeat press while in flight is ignored', callsDuringFlight === 1, callsDuringFlight);
+    await act('util.light'); // repeat press while the first request is in flight
+    check('Repeat press while in flight is ignored', current.__houseApi.actionCalls.length === 1, current.__houseApi.actionCalls);
     await current.waitForFunction(() => /is-on/.test(document.querySelector('.utils .u').className));
-    check('First press fires the on webhook and marks the control on', (await current.evaluate(() => window.__haCalls[0])).includes('qa-lights-on'));
-    await current.waitForFunction(() => document.querySelector('.utils .u').textContent.trim() === 'Lights', null, { timeout: 3000 });
-    check('Label reverts to Lights after a couple of seconds', true);
+    check('A short press fires a plain toggle (no body) and marks the control on', Object.keys(current.__houseApi.actionCalls[0].body).length === 0, current.__houseApi.actionCalls[0]);
+    await current.waitForFunction(() => document.querySelector('.utils .u').textContent.trim() === 'Living room', null, { timeout: 3000 });
+    check('Label reverts to the tile label after a couple of seconds', true);
+    await closePage();
 
-    await act('util.ha'); // second press: now on, should fire the off webhook
-    await current.waitForFunction(() => window.__haCalls.length === 2);
-    check('Second press fires the off webhook', (await current.evaluate(() => window.__haCalls[1])).includes('qa-lights-off'));
+    await page({ houseApi: { ...QA_LIGHT, state: 'on' } });
+    await act('util.light');
     await current.waitForFunction(() => !/is-on/.test(document.querySelector('.utils .u').className));
-    check('Second press clears the on state', true);
+    check('Pressing an on tile clears the on state', true);
     await closePage();
 
-    await page({ ha: 'fail' });
-    await act('util.ha');
-    await current.waitForFunction(() => /reach Home Assistant/.test(document.querySelector('.utils .u').textContent || ''), null, { timeout: 3000 });
-    const failedClass = await current.locator('.utils .u').nth(0).getAttribute('class');
-    check('Failure shows the Home Assistant error message on the control itself', !/is-on/.test(failedClass), failedClass);
-    await closePage();
+    await page({ houseApi: QA_LIGHT });
+    await nav('up');
+    await current.keyboard.down('Enter');
+    await current.waitForFunction(() => ShoreQA.where().view === 'light', null, { timeout: 2000 });
+    check('Holding OK opens the brightness/colour popup', (await call('where')).view === 'light');
+    await current.keyboard.up('Enter');
+    check('Opening the popup did not swallow the short-press toggle underneath it', current.__houseApi.actionCalls.length === 1, current.__houseApi.actionCalls);
+    const title = await current.locator('.light-title').textContent();
+    check('Popup title shows the tile label', title === 'Living room', title);
+    check('Brightness is the first focused zone', (await current.locator('.light-row').getAttribute('class')).includes('is-focus'));
 
-    await page({ ha: 'slow' });
-    await act('util.ha');
-    check('Slow request stays in sending state before the client timeout', /Sending/.test(await current.locator('.utils .u').nth(0).textContent()));
-    await current.waitForFunction(() => /reach Home Assistant/.test(document.querySelector('.utils .u').textContent || ''), null, { timeout: 5000 });
-    check('The 4s client-side timeout produces the same error message', true);
-    await closePage();
+    for (let i = 0; i < 3; i++) await nav('right'); // brightness 60 -> 75
+    await nav('down'); // mode zone
+    await nav('right'); // white -> colour
+    await nav('down'); // detail zone (swatches)
+    await nav('right'); // pick a swatch
+    await current.waitForTimeout(900); // past the debounce
+    const committed = current.__houseApi.actionCalls.at(-1);
+    check('Adjustments debounce into a single action carrying brightness + colour together',
+      current.__houseApi.actionCalls.length === 2 && committed.body.brightness === 75 && committed.body.color_mode === 'color' && !!committed.body.rgb, current.__houseApi.actionCalls);
 
-    await page({ ha: 'ok' });
-    await scene('settings'); await act('settings.group.ha');
-    check('Home Assistant settings row opens the Jellyfin sync panel', (await call('where')).view === 'ha');
-    const rowNames = await current.locator('.ha-row-name').allTextContents();
-    check('Panel holds only the Jellyfin light sync row (Lights moved to its own control)', same(rowNames, ['Jellyfin light sync']), rowNames);
-    await act('ha.fire.jellyfinSyncOn');
-    await current.waitForFunction(() => /Sending|Done/.test(document.querySelector('.ha-status')?.textContent || ''));
-    check('The settings-housed panel still fires and shows feedback', true);
+    await nav('left'); // one more colour change
+    check('A fresh adjustment resets the debounce rather than firing immediately', current.__houseApi.actionCalls.length === 2);
     await nav('back');
-    check('Back closes the panel and returns to Settings', (await call('where')).view === 'settings');
+    check('Back flushes the still-pending change immediately instead of waiting out the debounce', current.__houseApi.actionCalls.length === 3, current.__houseApi.actionCalls);
+    check('Back closes the popup', (await call('where')).view === 'home');
   });
   section = 'Run integrity';
   report.sourceAfter = hashes();

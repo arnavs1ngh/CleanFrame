@@ -41,9 +41,11 @@ never by anything under `app/`. Routes, served by `npm run dev`:
   fixture, supports `ETag`/`If-None-Match` -> 304, and `fail=1` returns a
   500.
 - `POST /mock/v1/actions/{tile-id}?scenario=<name>&delay=<ms>&fail=<0|1>`
-  - flips a toggle tile's in-memory state (reset on preview restart) and
-    returns `{ ok, tile }`. `fail=1` returns `{ ok: false, tile }` without
-    flipping state.
+  - with no body: flips a toggle tile's in-memory state (reset on preview
+    restart). With a JSON body (`brightness`/`color_mode`/`rgb`/
+    `color_temp_k`): merges those fields onto the tile instead of toggling.
+    Returns `{ ok, tile }`. `fail=1` returns `{ ok: false, tile }` without
+    applying anything.
 
 When no real `app/house-api-config.js` is present, `npm run dev` serves a
 dev-only default `house-api-config.js` pointing `HOUSE_API_BASE` at
@@ -66,11 +68,37 @@ Screenshots every fixture scenario in List and Dock, at 1920x1080 and
 `.local/shots/`, plus a single composited `contact-sheet.png`. It
 intercepts `**/v1/home*` at the Playwright level with the raw fixture
 body, so it doesn't depend on how `app/house-api.js` ends up building its
-request URL. Run it after any change to the weather strip, calendar
-panel or Home Assistant panel and review the contact sheet before calling
-a UI piece done - see the workflow in the house-api-ui task description
+request URL. Run it after any change to the weather strip, calendar panel or the
+Lights control/popup and review the contact sheet before calling a UI
+piece done - see the workflow in the house-api-ui task description
 (`normal.json` first, then every scenario, especially `long-titles`,
 `busy-week`, `ha-down`, `redacted` and `night`).
+
+## Lights control (replaces the old webhook integration)
+
+The old direct-webhook Home Assistant integration (`app/ha.js`,
+`app/ha-config.js`, the Settings-housed "Jellyfin light sync" panel) is
+gone - fully removed, including its `config.xml` `<access>`/`internet`
+entries. Everything now goes through house-api's `tiles` data; see
+`docs/home-assistant.md` for the full history/status.
+
+- The Home-row control represents whichever tile has `quick: true` (see
+  `docs/api-needs.md`) - label/icon/on-off state all come from that tile,
+  not a hardcoded string.
+- Short press toggles immediately, same as before. Holding OK past
+  `LIGHT_LONGPRESS_MS` (~500ms, see the keydown handler near the bottom of
+  `app/main.js`) *additionally* opens a brightness/colour popup
+  (`V.light`/`FRAMES.light`/`FILLS.light`) - it never delays or cancels
+  the short-press toggle underneath it. Only opens for a tile with
+  `brightness` and/or `color_mode` present.
+- The popup debounces adjustments (`LIGHT_COMMIT_MS`, ~700ms) into a
+  single `POST /v1/actions/{id}` call carrying whatever changed, instead
+  of firing on every keypress; Back flushes any pending change
+  immediately rather than waiting out the debounce.
+- `scripts/check-browser.mjs`'s `page()` has a `houseApi` option (a tile
+  object) that mocks `house-api-config.js` + `/v1/home` + `/v1/actions/*`
+  at the Playwright route level - see the "Lights control" test section
+  for the pattern (`current.__houseApi.actionCalls` records every call).
 
 ## Never package dev code
 

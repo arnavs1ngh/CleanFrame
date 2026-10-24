@@ -23,9 +23,6 @@ PP*.woff
 PP*.woff2
 *.wgt
 
-# Private Home Assistant config (webhook IDs, LAN address). Copy from ha-config.example.js.
-/app/ha-config.js
-
 # Private house-api config (backend base URL). Copy from house-api-config.example.js.
 /app/house-api-config.js
 

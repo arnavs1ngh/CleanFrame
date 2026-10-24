@@ -47,13 +47,12 @@
   var LOOK_VALUES = { bg: ['dark', 'light', 'photo'], layout: ['list', 'dock'], apps: ['icons', 'both', 'text'], font: Object.keys(FONTS).filter(function (id) { return id === 'manrope' || PRIVATE_FONTS.indexOf(id) >= 0; }), controls: ['icons', 'both', 'text'], focus: ['type', 'glass'], material: ['soft', 'frost', 'tint'] };
   var LOOK_NAMES = { bg: 'Background', layout: 'Layout', apps: 'Apps', font: 'Font', controls: 'Home controls', focus: 'Focus', material: 'Material' };
   var VALUE_NAMES = { dark: 'Dark', light: 'Light', photo: 'Photo', list: 'List', dock: 'Dock', type: 'Type', glass: 'Glass', soft: 'Soft', frost: 'Frost', tint: 'Clear tint', icons: 'Icons', both: 'Icons and text', text: 'Text' };
-  var UTIL = { art: ['Art Mode', 'art'], apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'], ha: ['Lights', 'bulb'] };
+  var UTIL = { art: ['Art Mode', 'art'], apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'], light: ['Lights', 'bulb'] };
   var MSG = {
     leave: { title: 'Leave Home?', line: 'Open Samsung Home?', note: '', actions: [['stay', 'Stay'], ['samsung', 'Samsung Home']] }
   };
-  var HA_ROWS = [
-    { label: 'Jellyfin light sync', on: 'jellyfinSyncOn', off: 'jellyfinSyncOff' }
-  ];
+  var LIGHT_SWATCHES = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#6366f1', '#a855f7', '#ec4899'];
+  var LIGHT_TEMP_MIN = 2200, LIGHT_TEMP_MAX = 6500, LIGHT_TEMP_STEP = 200, LIGHT_BRIGHT_STEP = 5, LIGHT_COMMIT_MS = 700, LIGHT_LONGPRESS_MS = 500;
   var SVG = {
     art: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.8" r="1.5"/><path d="m4.5 17.5 4.5-4.5 3 3 2.5-2.5 5 5"/>',
     bulb: '<path d="M12 3.5a6.5 6.5 0 0 0-3.8 11.8c.7.5 1.3 1.3 1.3 2.3v.4h5v-.4c0-1 .6-1.8 1.3-2.3A6.5 6.5 0 0 0 12 3.5Z"/><path d="M9.8 20.3h4.4M10.3 22h3.4"/>',
@@ -93,7 +92,7 @@
     sel: null, selIdx: 0, lastUtil: 0, appsFocus: null, settingsFocus: 'background', appearanceFocus: 'bg', detailFocus: {},
     undo: [], removedAt: {}, note: null, err: null,
     writes: 0, failed: 0, log: [], logN: 0, lastLaunch: null, press: null,
-    haOn: false, haStatus: '', house: null,
+    lightStatus: '', house: null,
     wallShown: null, wallPending: null, wallError: null,
     shown: null, pending: null, lookError: null, bundleKey: null, previewBundle: null, reflow: false, fontSwitch: false
   };
@@ -508,7 +507,18 @@
   }
 
   /* ---------- Navigation targets ---------- */
-  function utils() { return window.HomeAssistant && HomeAssistant.configured() ? ['ha', 'apps', 'settings'] : ['apps', 'settings']; }
+  function quickTile() {
+    var tiles = S.house && S.house.home && S.house.home.tiles;
+    if (!tiles || tiles.status !== 'ok' || !tiles.data) return null;
+    for (var i = 0; i < tiles.data.length; i++) if (tiles.data[i].quick) return tiles.data[i];
+    return null;
+  }
+  function applyTileResult(result) {
+    var tiles = S.house && S.house.home && S.house.home.tiles && S.house.home.tiles.data, i;
+    if (!tiles || !result) return;
+    for (i = 0; i < tiles.length; i++) if (tiles[i].id === result.id) tiles[i] = result;
+  }
+  function utils() { return window.HouseAPI && HouseAPI.configured() ? ['light', 'apps', 'settings'] : ['apps', 'settings']; }
   /* prev/next run along the apps; out goes to the controls, inn comes back (or to a per-app action). */
   function axes() {
     var v = S.c.layout === 'list';
@@ -517,21 +527,31 @@
   function utilAction(u) {
     if (u === 'art') perform('Art Mode', FrameDevice.art);
     else if (u === 'apps') openApps();
-    else if (u === 'ha') haToggle();
+    else if (u === 'light') lightToggle();
     else openSettings();
   }
-  function haToggle() {
-    if (S.haStatus === 'sending') return;
-    var action = S.haOn ? 'lightsOff' : 'lightsOn';
-    S.haStatus = 'sending'; render();
-    HomeAssistant.fire(action, function (err) {
-      if (!err) S.haOn = !S.haOn;
-      S.haStatus = err ? 'failed' : 'done';
+  function lightToggle() {
+    var tile = quickTile();
+    if (!tile || S.lightStatus === 'sending') return;
+    S.lightStatus = 'sending'; render();
+    HouseAPI.fireAction(tile.id, null, function (err, resultTile) {
+      if (resultTile) applyTileResult(resultTile);
+      S.lightStatus = err ? 'failed' : 'done';
       render();
-      setTimeout(function () { S.haStatus = ''; render(); }, 2000);
+      setTimeout(function () { S.lightStatus = ''; render(); }, 2000);
     });
   }
-  function openHA() { push({ id: 'ha', f: { row: 0, col: 0 }, status: {} }); }
+  /* Long press (see the keydown handler near the bottom) additionally opens this - it never
+     replaces the short-press toggle above. */
+  function openLight() {
+    var tile = quickTile();
+    if (!tile || (tile.brightness == null && !tile.color_mode)) return;
+    push({ id: 'light', f: { zone: 'brightness' }, tileId: tile.id, dirty: false,
+      brightness: tile.brightness == null ? 100 : tile.brightness,
+      colorMode: tile.color_mode || 'white',
+      rgb: tile.rgb || { r: 255, g: 255, b: 255 },
+      colorTempK: tile.color_temp_k == null ? 4000 : tile.color_temp_k });
+  }
   function addAppsRoute() { openEditor('home'); }
   function openSettings() { push({ id: 'settings', f: { id: S.settingsFocus } }); }
   function openAppearance(group) {
@@ -850,7 +870,6 @@
       { id: 'typography', label: 'Typography', value: FONTS[S.c.font].name },
       { id: 'focus', label: 'Focus', value: VALUE_NAMES[S.c.focus] + (materialApplies() ? ', ' + VALUE_NAMES[S.c.material] : '') },
       { id: 'editor', label: 'Apps on Home', value: n + (n === 1 ? ' app' : ' apps') }];
-    if (window.HomeAssistant && HomeAssistant.configured()) rows.push({ id: 'ha', label: 'Home Assistant', value: 'Jellyfin light sync' });
     rows.push({ id: 'samsung', label: 'Samsung', value: 'Home and TV settings' });
     return rows;
   }
@@ -870,7 +889,6 @@
   };
   function settingsOk(id) {
     if (id === 'editor') openEditor('settings');
-    else if (id === 'ha') openHA();
     else openAppearance(id);
   }
   var DETAIL_NAMES = { background: 'Background', layout: 'Layout', typography: 'Typography', focus: 'Focus', rotation: 'Rotation', samsung: 'Samsung' };
@@ -993,33 +1011,46 @@
     },
     point: function (t, z, i) { if (z === 'act') { t.f.b = i; this.key(t, 'ok'); } }
   };
-  /* ---------- Home Assistant panel ---------- */
-  function haKey(row, col) { return col === 0 ? row.on : row.off; }
-  function haFire(t, row, col) {
-    var key = haKey(row, col);
-    if (t.status[key] === 'sending') return;
-    t.status[key] = 'sending';
-    render();
-    HomeAssistant.fire(key, function (err) {
-      t.status[key] = err ? 'failed' : 'done';
+  /* ---------- Light panel (brightness/colour, opened by long-pressing the Lights control) ---------- */
+  var LIGHT_ZONES = ['brightness', 'mode', 'detail'], lightCommitTimer = null;
+  function rgbToHex(rgb) { return '#' + ['r', 'g', 'b'].map(function (c) { return clamp(Math.round(rgb[c] || 0), 0, 255).toString(16).replace(/^(.)$/, '0$1'); }).join(''); }
+  function hexToRgb(hex) { return { r: parseInt(hex.slice(1, 3), 16), g: parseInt(hex.slice(3, 5), 16), b: parseInt(hex.slice(5, 7), 16) }; }
+  function lightTouch(t) {
+    t.dirty = true;
+    clearTimeout(lightCommitTimer);
+    lightCommitTimer = setTimeout(function () { commitLight(t); }, LIGHT_COMMIT_MS);
+  }
+  function commitLight(t) {
+    clearTimeout(lightCommitTimer); lightCommitTimer = null;
+    if (!t.dirty) return;
+    t.dirty = false;
+    var body = { brightness: t.brightness, color_mode: t.colorMode };
+    if (t.colorMode === 'color') body.rgb = t.rgb; else body.color_temp_k = t.colorTempK;
+    HouseAPI.fireAction(t.tileId, body, function (err, resultTile) {
+      if (resultTile) applyTileResult(resultTile);
       render();
-      setTimeout(function () { delete t.status[key]; render(); }, 2000);
     });
   }
-  V.ha = {
+  V.light = {
     sheet: true,
     key: function (t, k) {
-      if (k === 'back') { pop(); return; }
-      if (k === 'up') t.f.row = Math.max(0, t.f.row - 1);
-      else if (k === 'down') t.f.row = Math.min(HA_ROWS.length - 1, t.f.row + 1);
-      else if (k === 'left') t.f.col = 0;
-      else if (k === 'right') t.f.col = 1;
-      else if (k === 'ok') haFire(t, HA_ROWS[t.f.row], t.f.col);
+      var zi = LIGHT_ZONES.indexOf(t.f.zone), swatches, idx;
+      if (k === 'back') { commitLight(t); pop(); return; }
+      if (k === 'up' && zi > 0) { t.f.zone = LIGHT_ZONES[zi - 1]; return; }
+      if (k === 'down' && zi < LIGHT_ZONES.length - 1) { t.f.zone = LIGHT_ZONES[zi + 1]; return; }
+      if (k !== 'left' && k !== 'right') return;
+      if (t.f.zone === 'brightness') { t.brightness = clamp(t.brightness + (k === 'right' ? LIGHT_BRIGHT_STEP : -LIGHT_BRIGHT_STEP), 0, 100); lightTouch(t); }
+      else if (t.f.zone === 'mode') { t.colorMode = t.colorMode === 'color' ? 'white' : 'color'; lightTouch(t); }
+      else if (t.f.zone === 'detail' && t.colorMode === 'color') {
+        swatches = LIGHT_SWATCHES; idx = swatches.indexOf(rgbToHex(t.rgb));
+        t.rgb = hexToRgb(swatches[clamp((idx < 0 ? 0 : idx) + (k === 'right' ? 1 : -1), 0, swatches.length - 1)]);
+        lightTouch(t);
+      } else if (t.f.zone === 'detail') { t.colorTempK = clamp(t.colorTempK + (k === 'right' ? LIGHT_TEMP_STEP : -LIGHT_TEMP_STEP), LIGHT_TEMP_MIN, LIGHT_TEMP_MAX); lightTouch(t); }
     },
     point: function (t, z, i) {
-      if (z !== 'act') return;
-      t.f.row = Math.floor(i / 2); t.f.col = i % 2;
-      haFire(t, HA_ROWS[t.f.row], t.f.col);
+      if (z === 'zone') t.f.zone = LIGHT_ZONES[i];
+      else if (z === 'mode') { t.f.zone = 'mode'; t.colorMode = i === 0 ? 'color' : 'white'; lightTouch(t); }
+      else if (z === 'swatch') { t.f.zone = 'detail'; t.rgb = hexToRgb(LIGHT_SWATCHES[i]); lightTouch(t); }
     }
   };
 
@@ -1196,17 +1227,23 @@
   function utilBtn(z, i, action, inner, extra, name) {
     return '<button type="button" tabindex="-1" class="u' + (extra || '') + '" data-z="' + z + '" data-i="' + i + '" data-action="' + action + '" aria-label="' + esc(name) + '"><span class="u-content">' + inner + '</span></button>';
   }
-  function haLabel() {
-    return S.haStatus === 'sending' ? 'Sending…' : S.haStatus === 'done' ? 'Done' : S.haStatus === 'failed' ? 'Couldn’t reach Home Assistant' : UTIL.ha[0];
+  function lightLabel() {
+    var tile;
+    if (S.lightStatus === 'sending') return 'Sending…';
+    if (S.lightStatus === 'done') return 'Done';
+    if (S.lightStatus === 'failed') return 'Couldn’t reach house-api.';
+    tile = quickTile();
+    return tile ? tile.label : UTIL.light[0];
   }
   function renderUtils(hs) {
     var html = '', style = hs.mode === 'arrange' && S.c.controls !== 'text' ? 'both' : S.c.controls;
     var iconsOnly = style === 'icons', U = utils(), focused = null;
     utilsEl.className = 'utils quiet-utils is-' + style + (hs.zone === 'util' || hs.zone === 'ctl' ? ' is-awake' : '');
     U.forEach(function (u, i) {
-      var label = u === 'ha' ? haLabel() : UTIL[u][0];
-      var extra = u === 'ha' ? (S.haOn ? ' is-on' : '') + (S.haStatus === 'sending' ? ' is-busy' : '') + (S.haStatus === 'failed' ? ' is-failed' : '') : '';
-      html += utilBtn('util', i, 'util.' + u, icon(UTIL[u][1], '', true) + '<span class="u-label">' + esc(label) + '</span>', extra, UTIL[u][0]);
+      var label = u === 'light' ? lightLabel() : UTIL[u][0];
+      var tile = u === 'light' ? quickTile() : null;
+      var extra = u === 'light' ? ((tile && tile.state === 'on') ? ' is-on' : '') + (S.lightStatus === 'sending' ? ' is-busy' : '') + (S.lightStatus === 'failed' ? ' is-failed' : '') : '';
+      html += utilBtn('util', i, 'util.' + u, icon(UTIL[u][1], '', true) + '<span class="u-label">' + esc(label) + '</span>', extra, label);
     });
     setHTML(utilsEl, html);
     Array.prototype.forEach.call(utilsEl.querySelectorAll('.u'), function (b) {
@@ -1645,7 +1682,13 @@
       var m = messageContent(t);
       return '<h2 class="msg-title">' + esc(m.title) + '</h2><p class="msg-line">' + esc(m.line) + '</p><p class="msg-note">' + esc(m.note) + '</p><div class="msg-acts" data-slot="acts"></div>';
     },
-    ha: function () { return '<h2 class="msg-title">Home Assistant</h2><div class="ha-rows" data-slot="rows"></div>'; }
+    light: function () {
+      return '<h2 class="msg-title light-title" data-slot="title"></h2>'
+        + '<button type="button" tabindex="-1" class="light-row" data-slot="brightnessRow" data-z="zone" data-i="0" data-action="light.zone.brightness"><span class="light-row-label">Brightness</span><div class="light-slider" data-slot="brightnessSlider"></div><span class="light-row-value" data-slot="brightnessValue"></span></button>'
+        + '<div class="light-modes" data-slot="modes"></div>'
+        + '<div class="light-detail" data-slot="detail"></div>'
+        + '<p class="light-hint" data-slot="hint" aria-live="polite"></p>';
+    }
   };
   function gridTileHtml(id) {
     var a = app(id), state = onHome(id) ? badge(true) + '<span>On Home</span>' : '';
@@ -1745,22 +1788,31 @@
         return '<button type="button" tabindex="-1" class="btn' + (i === t.f.b ? ' is-focus' : '') + '" data-z="act" data-i="' + i + '" data-action="message.' + a[0] + '"><span>' + a[1] + '</span></button>';
       }).join(''));
     },
-    ha: function (t, el) {
-      setHTML(el.rows, HA_ROWS.map(function (row, ri) {
-        return '<div class="ha-row"><span class="ha-row-name">' + esc(row.label) + '</span><div class="ha-acts">'
-          + haCellHtml(t, row, ri, 0) + haCellHtml(t, row, ri, 1) + '</div></div>';
+    light: function (t, el) {
+      var tile = quickTile() || {}, bFocus = t.f.zone === 'brightness', mFocus = t.f.zone === 'mode', dFocus = t.f.zone === 'detail', pct;
+      setHTML(el.title, esc(tile.label || UTIL.light[0]));
+      el.brightnessRow.className = 'light-row' + (bFocus ? ' is-focus' : '');
+      setHTML(el.brightnessSlider, '<div class="light-slider-fill" style="width:' + t.brightness + '%"></div>');
+      setHTML(el.brightnessValue, t.brightness + '%');
+      el.modes.className = 'light-modes' + (mFocus ? ' is-focus' : '');
+      setHTML(el.modes, ['color', 'white'].map(function (m, i) {
+        return '<button type="button" tabindex="-1" class="light-mode-btn' + (t.colorMode === m ? ' is-selected' : '') + (mFocus && t.colorMode === m ? ' is-focus' : '')
+          + '" data-z="mode" data-i="' + i + '" data-action="light.mode.' + m + '">' + (m === 'color' ? 'Colour' : 'White') + '</button>';
       }).join(''));
+      el.detail.className = 'light-detail' + (dFocus ? ' is-focus' : '');
+      if (t.colorMode === 'color') {
+        setHTML(el.detail, LIGHT_SWATCHES.map(function (hex, i) {
+          var selected = rgbToHex(t.rgb) === hex;
+          return '<button type="button" tabindex="-1" class="light-swatch' + (selected ? ' is-selected' : '') + (dFocus && selected ? ' is-focus' : '')
+            + '" style="background:' + hex + '" data-z="swatch" data-i="' + i + '" data-action="light.swatch.' + i + '" aria-label="Colour ' + (i + 1) + '"></button>';
+        }).join(''));
+      } else {
+        pct = (t.colorTempK - LIGHT_TEMP_MIN) / (LIGHT_TEMP_MAX - LIGHT_TEMP_MIN) * 100;
+        setHTML(el.detail, '<div class="light-temp-track"><div class="light-temp-fill" style="left:' + pct + '%"></div></div><span class="light-row-value">' + t.colorTempK + 'K</span>');
+      }
+      setHTML(el.hint, t.dirty ? 'Saving…' : '');
     }
   };
-  function haStatusText(state) {
-    return state === 'sending' ? 'Sending…' : state === 'done' ? 'Done' : state === 'failed' ? 'Couldn’t reach Home Assistant' : '';
-  }
-  function haCellHtml(t, row, ri, col) {
-    var key = haKey(row, col), label = col === 0 ? 'On' : 'Off', state = t.status[key] || '', focus = t.f.row === ri && t.f.col === col;
-    return '<div class="ha-act"><button type="button" tabindex="-1" class="btn ha-btn' + (focus ? ' is-focus' : '') + (state === 'sending' ? ' is-busy' : '')
-      + '" data-z="act" data-i="' + (ri * 2 + col) + '" data-action="ha.fire.' + key + '" aria-label="' + esc(row.label + ' ' + label) + '" aria-busy="' + (state === 'sending') + '"><span>' + label + '</span></button>'
-      + '<p class="ha-status' + (state === 'failed' ? ' setting-error' : '') + '" aria-live="polite">' + esc(haStatusText(state)) + '</p></div>';
-  }
 
   /* ---------- Atomic appearance bundles ---------- */
   var wallToken = 0, committedBundle = null, reflowToken = 0, fontSwitchToken = 0;
@@ -1972,17 +2024,28 @@
     if (!el || el === stage) return;
     pointAt(el);
   });
-  var heldKeys = {};
+  function focusedUtil() {
+    var t = top(), U;
+    if (t.id !== 'home' || t.f.zone !== 'util') return null;
+    U = utils();
+    return U[t.f.u] || null;
+  }
+  var heldKeys = {}, longPressTimer = null;
   document.addEventListener('keydown', function (ev) {
     var code = ev.keyCode, k = KEYS[code];
     if (code === 9) { ev.preventDefault(); return; }
     if (!k || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     ev.preventDefault();
     if (k === 'ok' || k === 'back') { if (ev.repeat || heldKeys[code]) return; heldKeys[code] = true; }
+    // Holding OK on the Lights control opens brightness/colour, in addition to (not instead of)
+    // the immediate toggle below - avoids delaying the common quick-toggle case.
+    if (k === 'ok' && !longPressTimer && focusedUtil() === 'light') {
+      longPressTimer = setTimeout(function () { longPressTimer = null; openLight(); }, LIGHT_LONGPRESS_MS);
+    }
     press(k);
   });
-  document.addEventListener('keyup', function (ev) { delete heldKeys[ev.keyCode]; });
-  window.addEventListener('blur', function () { heldKeys = {}; });
+  document.addEventListener('keyup', function (ev) { delete heldKeys[ev.keyCode]; clearTimeout(longPressTimer); longPressTimer = null; });
+  window.addEventListener('blur', function () { heldKeys = {}; clearTimeout(longPressTimer); longPressTimer = null; });
   window.addEventListener('focus', function () { release(); focusStage(); after(); updateClock(); });
   document.addEventListener('visibilitychange', function () {
     heldKeys = {};

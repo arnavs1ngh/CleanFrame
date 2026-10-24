@@ -1,12 +1,29 @@
 {
-  "meta": { "version": 1, "generated_at": "2026-10-24T16:10:00Z", "refresh_after_s": 60 },
+  "meta": {
+    "version": 1,
+    "generated_at": "2026-10-24T16:10:00Z",
+    "refresh_after_s": 60
+  },
   "weather": {
     "status": "ok",
     "stale": true,
     "data": {
-      "now": { "temp_c": 12, "icon": "cloudy-rain", "label": "Light rain" },
-      "today": { "high_c": 14, "low_c": 8 },
-      "next_hours": [ { "time": "19:00", "temp_c": 11, "icon": "rain" } ]
+      "now": {
+        "temp_c": 12,
+        "icon": "cloudy-rain",
+        "label": "Light rain"
+      },
+      "today": {
+        "high_c": 14,
+        "low_c": 8
+      },
+      "next_hours": [
+        {
+          "time": "19:00",
+          "temp_c": 11,
+          "icon": "rain"
+        }
+      ]
     }
   },
   "calendar": {
@@ -14,13 +31,43 @@
     "stale": true,
     "data": {
       "days": [
-        { "label": "Today", "events": [ { "time": "19:30", "end": "21:00", "all_day": false, "title": "House dinner", "calendar": "House", "redacted": false } ] },
-        { "label": "Tomorrow", "events": [] },
-        { "label": "Wednesday", "events": [] },
-        { "label": "Thursday", "events": [] },
-        { "label": "Friday", "events": [] },
-        { "label": "Saturday", "events": [] },
-        { "label": "Sunday", "events": [] }
+        {
+          "label": "Today",
+          "events": [
+            {
+              "time": "19:30",
+              "end": "21:00",
+              "all_day": false,
+              "title": "House dinner",
+              "calendar": "House",
+              "redacted": false
+            }
+          ]
+        },
+        {
+          "label": "Tomorrow",
+          "events": []
+        },
+        {
+          "label": "Wednesday",
+          "events": []
+        },
+        {
+          "label": "Thursday",
+          "events": []
+        },
+        {
+          "label": "Friday",
+          "events": []
+        },
+        {
+          "label": "Saturday",
+          "events": []
+        },
+        {
+          "label": "Sunday",
+          "events": []
+        }
       ]
     }
   },
@@ -28,8 +75,29 @@
     "status": "ok",
     "stale": true,
     "data": [
-      { "id": "living-lights", "label": "Living room", "icon": "bulb", "kind": "toggle", "state": "on" },
-      { "id": "front-door", "label": "Front door", "icon": "lock", "kind": "toggle", "state": "on" }
+      {
+        "id": "living-lights",
+        "label": "Living room",
+        "icon": "bulb",
+        "kind": "toggle",
+        "state": "on",
+        "quick": true,
+        "brightness": 85,
+        "color_mode": "color",
+        "rgb": {
+          "r": 255,
+          "g": 196,
+          "b": 120
+        },
+        "color_temp_k": 3000
+      },
+      {
+        "id": "front-door",
+        "label": "Front door",
+        "icon": "lock",
+        "kind": "toggle",
+        "state": "on"
+      }
     ]
   }
 }

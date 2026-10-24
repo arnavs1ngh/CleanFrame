@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import io
+import json
 import os
 import sys
 import threading
@@ -130,9 +131,12 @@ class Preview(SimpleHTTPRequestHandler):
         prefix = '/mock/v1/actions/'
         if route.startswith(prefix) and len(route) > len(prefix):
             length = int(self.headers.get('Content-Length', '0') or '0')
-            if length:
-                self.rfile.read(length)
-            handle_post_action(self, route[len(prefix):], parse_qs(urlsplit(self.path).query))
+            raw = self.rfile.read(length) if length else b''
+            try:
+                body = json.loads(raw) if raw else {}
+            except ValueError:
+                body = {}
+            handle_post_action(self, route[len(prefix):], parse_qs(urlsplit(self.path).query), body)
             return
         self.send_error(404, 'No such endpoint')
 
