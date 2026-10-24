@@ -70,7 +70,20 @@
     down: '<path d="m5 8.5 7 7 7-7"/>',
     updown: '<path d="m7.5 9.5 4.5-4.5 4.5 4.5M7.5 14.5l4.5 4.5 4.5-4.5"/>',
     tv: '<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8.5 20h7"/>',
-    warn: '<path d="M12 4 2.8 19.5h18.4Z"/><path d="M12 10v4.5M12 17.3v.1"/>'
+    warn: '<path d="M12 4 2.8 19.5h18.4Z"/><path d="M12 10v4.5M12 17.3v.1"/>',
+    /* Weather glyphs. Placeholder inline set (Phase 3 item 4 upgrades these to the bundled
+       SVG + metrics.js pipeline used by app/assets/icons/); covers dev/fixtures/v1's icon names. */
+    'clear-day': '<circle cx="12" cy="12" r="4.2"/><path d="M12 3v2.2M12 18.8V21M4.2 12H6.4M17.6 12h2.2M6.3 6.3l1.5 1.5M16.2 16.2l1.5 1.5M6.3 17.7l1.5-1.5M16.2 7.8l1.5-1.5"/>',
+    'clear-night': '<path d="M16.5 14.2A7 7 0 0 1 9.8 4.8a7 7 0 1 0 8.4 10.9c-.6.3-1.2.5-1.7.5Z"/>',
+    'partly-cloudy-day': '<circle cx="9" cy="8" r="3"/><path d="M9 3v1.4M4.5 8h1.4M5.4 4.4l1 1M12.6 4.4l-1 1"/><path d="M6 20h11a3.6 3.6 0 0 0 .6-7.2A5 5 0 0 0 8 10.8 3.8 3.8 0 0 0 6 20Z"/>',
+    'partly-cloudy-night': '<path d="M13.5 10.1A4.3 4.3 0 0 1 9.8 4.8a4.3 4.3 0 1 0 5 6.6c-.4.2-.8.3-1.3.7Z"/><path d="M6 20h11a3.6 3.6 0 0 0 .6-7.2A5 5 0 0 0 8 10.8 3.8 3.8 0 0 0 6 20Z"/>',
+    cloudy: '<path d="M6 19h11.5a3.8 3.8 0 0 0 .6-7.5A5.3 5.3 0 0 0 8 10.3 4 4 0 0 0 6 19Z"/>',
+    'cloudy-rain': '<path d="M6 15h11a3.6 3.6 0 0 0 .5-7.1A5 5 0 0 0 8 7.2a3.8 3.8 0 0 0-2 7.8Z"/><path d="M9 18 8 20.5M13 18l-1 2.5M17 18l-1 2.5"/>',
+    rain: '<path d="M6 13.5h11a3.6 3.6 0 0 0 .5-7.1A5 5 0 0 0 8 5.7a3.8 3.8 0 0 0-2 7.8Z"/><path d="M7.5 16.5 6.3 20M11.5 16.5l-1.2 3M15.5 16.5l-1.2 3M19 16.5l-1 2.5"/>',
+    thunderstorm: '<path d="M6 13h11a3.6 3.6 0 0 0 .5-7.1A5 5 0 0 0 8 5.2a3.8 3.8 0 0 0-2 7.8Z"/><path d="M13 15 9.8 19.5h3L11.4 23l5-6h-3.2Z"/>',
+    snow: '<path d="M6 13.5h11a3.6 3.6 0 0 0 .5-7.1A5 5 0 0 0 8 5.7a3.8 3.8 0 0 0-2 7.8Z"/><path d="M8 17.5v.01M12 18.5v.01M16 17.5v.01M10 20.5v.01M14 20.5v.01"/>',
+    fog: '<path d="M4 9h13M3 13h17M5 17h13M7 21h9"/>',
+    wind: '<path d="M3 8h11.5a2.5 2.5 0 1 0-2.3-3.5"/><path d="M3 13h15a2.8 2.8 0 1 1-2.6 3.9"/><path d="M3 18h9"/>'
   };
 
   /* ---------- State ---------- */
@@ -80,7 +93,7 @@
     sel: null, selIdx: 0, lastUtil: 0, appsFocus: null, settingsFocus: 'background', appearanceFocus: 'bg', detailFocus: {},
     undo: [], removedAt: {}, note: null, err: null,
     writes: 0, failed: 0, log: [], logN: 0, lastLaunch: null, press: null,
-    haOn: false, haStatus: '',
+    haOn: false, haStatus: '', house: null,
     wallShown: null, wallPending: null, wallError: null,
     shown: null, pending: null, lookError: null, bundleKey: null, previewBundle: null, reflow: false, fontSwitch: false
   };
@@ -1112,8 +1125,22 @@
     if (!metrics || !metrics.digitCell) return text;
     return text.replace(/[0-9]/g, function (digit) { return '<span class="clock-digit">' + digit + '</span>'; });
   }
+  function weatherHtml() {
+    var snap = S.house, home = snap && snap.home, w = home && home.weather;
+    if (!w || w.status !== 'ok' || !w.data || !w.data.now) return '';
+    var now = w.data.now, today = w.data.today, stale = !!(snap.stale || w.stale);
+    var html = '<div class="weather' + (stale ? ' is-stale' : '') + '">';
+    if (SVG[now.icon]) html += icon(now.icon);
+    if (typeof now.temp_c === 'number') html += '<span class="wx-temp">' + Math.round(now.temp_c) + '°</span>';
+    if (now.label) html += '<span class="wx-label">' + esc(now.label) + '</span>';
+    if (today && typeof today.high_c === 'number' && typeof today.low_c === 'number') {
+      html += '<span class="wx-sep">·</span><span class="wx-range">' + Math.round(today.high_c) + '°/' + Math.round(today.low_c) + '°</span>';
+    }
+    html += '</div>';
+    return html;
+  }
   function renderCaption(t, hs) {
-    var html = '<span class="clock">' + clockHtml() + '</span>';
+    var html = '<div class="cap-row"><span class="clock">' + clockHtml() + '</span>' + weatherHtml() + '</div>';
     if (S.c.apps !== 'icons' && hs.items[hs.i] && (S.c.layout === 'list' ? photoLabel(hs.items[hs.i].id, false).size < 88 || photoLabel(hs.items[hs.i].id, false).ellipsis : hs.zone === 'apps' && reducedDockLabel(hs.items[hs.i].id))) html += '<span class="cap-line full-name">' + esc(app(hs.items[hs.i].id).name) + '</span>';
     setHTML(caption, html);
   }
@@ -1951,4 +1978,8 @@
   initialise();
   setLook({}, { transient: true, startup: true });
   norm(); render(); fit(); focusStage(); updateClock(); syncRotation();
+  if (window.HouseAPI) {
+    HouseAPI.subscribe(function (envelope) { S.house = envelope; render(); });
+    HouseAPI.start();
+  }
 })();

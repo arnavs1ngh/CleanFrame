@@ -32,7 +32,8 @@ export default [
         // HA_CONFIG/HOUSE_API_BASE are declared with `var` in their own config files and read
         // via window.* elsewhere, so they don't need (and must not have) a global entry here.
         FrameDevice: 'readonly',
-        HomeAssistant: 'readonly'
+        HomeAssistant: 'readonly',
+        HouseAPI: 'readonly'
       }
     },
     rules: {
