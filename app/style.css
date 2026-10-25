@@ -51,6 +51,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .cal-panel{position:absolute;left:140px;top:260px;width:760px;height:380px;border-radius:28px;background:rgba(6,7,8,.66);transition:opacity 140ms linear}
 .cal-panel.is-hidden{display:none}
 .cal-panel.is-stale{opacity:.6}
+/* Width is computed in JS (syncCalendarGeometry) to fill the actual gap up to the app list's
+   right edge, rather than a guessed fixed value or the clock/weather caption's narrow width. */
 .l-list .cal-panel{left:auto;right:140px;background:none}
 .bg-dark .cal-panel,.bg-light .cal-panel{background:none}
 .cal-rows{position:absolute;left:0;top:0;right:0;bottom:0;padding:28px 32px;overflow:hidden;color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.3)}
@@ -74,7 +76,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .l-list .cal-day+.cal-day{margin-top:10px}
 .l-list .cal-day-label{font-size:22px;line-height:34px;margin-bottom:4px;text-align:right}
 .l-list .cal-event{font-size:24px;line-height:30px;gap:12px;justify-content:flex-end}
-.l-list .cal-ev-time{width:76px;flex:none;text-align:right}
+/* order:1 (title defaults to 0) keeps time the last/right-most item regardless of title length,
+   so the group still packs flush against the row's right edge (justify-content:flex-end above)
+   but time's own fixed-width box always lands in the same place - a real vertical column. */
+.l-list .cal-ev-time{width:76px;flex:none;text-align:right;order:1}
 .l-list .cal-ev-title{flex:0 1 auto;min-width:0}
 .l-list .cal-ev-span{font-size:21px}
 .l-list .cal-more{font-size:21px;line-height:26px;margin-top:0;text-align:right}
@@ -418,13 +423,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .at-light .sheet-bg,.at-light .sheet-veil{display:none}
 .at-light .sheet{background:none}
 .at-light.is-sheet .home,.at-light.is-sheet .bg{visibility:visible}
-.light-popup{position:absolute;right:112px;top:170px;width:460px;padding:22px;border-radius:24px;background:rgba(6,7,8,.82);color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:16px;transition:opacity 140ms linear}
-/* List: positioned in JS (syncLightPopupGeometry) directly left of the control, vertically
-   centred on it - no fixed top/right here. No card either; legibility matches the caption's
-   own ink treatment for this zone (adaptive over Photo, plain var(--ink) on flat backgrounds). */
-.l-list .light-popup{background:none}
-.bg-dark.l-list .light-popup,.bg-light.l-list .light-popup{color:var(--ink);text-shadow:none}
-.bg-photo.l-list .light-popup{color:var(--tr-ink);text-shadow:var(--tr-shadow)}
+.light-popup{position:absolute;right:112px;top:170px;width:460px;padding:22px;border-radius:24px;background:rgba(6,7,8,.94);color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:16px;transition:opacity 140ms linear}
+/* List: positioned in JS (syncLightPopupGeometry) directly above the control, horizontally
+   centred on it, now that List's controls run along the bottom - no fixed top/left here. Both
+   the glass --plate and the stronger --lift still read as too transparent against the calendar
+   text sitting right behind it, so this uses the same solid, near-opaque dark card as Dock's
+   popup (the base rule above) rather than any translucent/glass treatment - no override needed. */
 .light-popup.is-dirty{opacity:.92}
 .light-row{display:flex;align-items:center;gap:16px;padding:0}
 .light-slider{flex:1;height:12px;border-radius:6px;background:rgba(128,128,128,.35);overflow:hidden}
@@ -456,25 +460,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .l-list.at-arrange .caption{top:72px}
 .bg-dark .clock,.bg-light .clock{opacity:.72;text-shadow:none}
 .bg-dark .cap-title,.bg-light .cap-title,.bg-dark .cap-line,.bg-light .cap-line,.bg-dark .weather,.bg-light .weather{color:var(--ink);text-shadow:none}
-.l-list .quiet-utils{right:122.1px;top:auto;bottom:112px;flex-direction:column;align-items:flex-end;gap:0}
+/* List now always forces icons-only (see renderUtils) - a horizontal row along the bottom,
+   freeing the full right-side column above it for the calendar. */
+.l-list .quiet-utils{right:122.1px;top:auto;bottom:112px;flex-direction:row;align-items:center}
 .l-list .quiet-utils .u{flex:none}
 .u-content{position:relative;z-index:2;display:inline-flex;align-items:center;gap:12px;transition:transform 140ms var(--ease)}
 .quiet-utils .u-content{gap:10px;transform-origin:50% 50%}
-.l-list .quiet-utils .u-content{flex-direction:row-reverse;gap:17.9px;transform-origin:100% 50%}
-.l-list .quiet-utils .u-label{position:relative;top:-1px}
 .quiet-utils .u[data-action="util.settings"] .ico{width:34px;height:34px}
-.l-list .quiet-utils .u[data-action="util.settings"] .u-content{gap:18.9px}
 .f-type .quiet-utils .u.is-focus .u-content{transform:scale(1.05)}
 .f-type .util-focus-label.is-on{transform:scale(1.05);transform-origin:50% 50%}
-.f-type.l-list .util-focus-label.is-on{transform-origin:100% 50%}
 .ut-lens{left:0;top:0;height:60px;border-radius:30px;pointer-events:none}
 .l-list .ut-lens .scrim{display:none}
-.l-list .quiet-utils.is-both .u-label{max-width:330px}
-.l-list .quiet-utils.is-both .u .ico{width:36px;height:36px}
-.l-list .quiet-utils.is-both .u[data-action="util.settings"] .ico{width:34px;height:34px}
 .quiet-utils.is-both .u[data-action="util.settings"]{padding-right:15px}
-.l-list .quiet-utils.is-both .u{font-size:28px;gap:14px}
-.l-list .util-focus-label{text-align:right}
 .bg-dark .mat,.bg-light .mat{display:none}
 .m-tint .mat-img{transform-origin:960px 792px;transform:scale(1.02)}
 .m-tint .mat-scrim{transform-origin:960px 232px;transform:scale(1.02)}
@@ -639,9 +636,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .quiet-utils.is-text{right:126px;gap:28px}
 .quiet-utils.is-text .u-content .ico{display:none}
 .quiet-utils.is-text .u{padding:0 14px}
-.l-list .quiet-utils.is-text{gap:0}
-.l-list .quiet-utils.is-text .u-label{max-width:330px}
-.l-list .quiet-utils.is-text .u-content{gap:0}
 
 /* Selected fonts affect Home only. Settings, editors and status retain Manrope. */
 .home{font-synthesis:none}
@@ -653,7 +647,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 .font-custom .home .cap-title{position:relative;top:var(--font-heading-shift)}
 .font-custom .home .full-name{position:relative;top:var(--font-full-name-shift)}
 .font-custom .home .quiet-utils .u-label{position:relative;top:var(--font-utility-shift)}
-.font-custom.l-list .home .quiet-utils .u-label{top:calc(-1px + var(--font-utility-shift))}
 .font-custom .home .ph-action>span,.font-custom .home .dock-action>span{position:relative;top:var(--font-action-shift)}
 .home .monogram,.home .cap-count,.home .cap-line:not(.full-name),.home .wall-keep,.home .error-chip{font-family:Manrope,Arial,sans-serif}
 .font-newsreader .home{font-variation-settings:"opsz" 28;font-optical-sizing:none}

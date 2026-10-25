@@ -639,10 +639,13 @@
   function listHomeKey(t, k, i, U) {
     var f = t.f, h = S.c.home;
     if (f.zone === 'util') {
+      // The row is horizontal now (see .l-list .quiet-utils), so left/right move between icons;
+      // left past the first one (Light) continues on out to the apps drawer, same as it always
+      // did. Up/back exit from anywhere in the row as an additional, redundant affordance.
       f.u = clamp(f.u, 0, U.length - 1);
-      if (k === 'up' && f.u > 0) f.u--;
-      else if (k === 'down' && f.u < U.length - 1) f.u++;
-      else if (k === 'left' || k === 'back') f.zone = 'apps';
+      if (k === 'left') { if (f.u > 0) f.u--; else f.zone = 'apps'; }
+      else if (k === 'right' && f.u < U.length - 1) f.u++;
+      else if (k === 'up' || k === 'back') f.zone = 'apps';
       else if (k === 'ok') { S.lastUtil = f.u; utilAction(U[f.u]); return; }
       S.lastUtil = f.u;
       return;
@@ -1218,21 +1221,26 @@
   }
   function syncCalendarGeometry() {
     if (S.c.layout !== 'list') { calPanel.style.width = calPanel.style.top = calPanel.style.height = ''; return; }
-    // Match the clock/weather column's width, and fill the gap between it and the controls exactly.
+    // Fill the gap up to the app list's actual rendered text, not its full 1200px row box (which
+    // is mostly empty - names are short and left-aligned) and not the clock/weather caption's own
+    // narrower content width either.
     var top = caption.offsetTop + caption.offsetHeight + 24, bottom = utilsEl.offsetTop - 24;
-    calPanel.style.width = caption.offsetWidth + 'px';
+    var names = phList.querySelectorAll('.ph-name'), right = 0, i, edge;
+    for (i = 0; i < names.length; i++) { edge = names[i].offsetLeft + names[i].offsetWidth; if (edge > right) right = edge; }
+    calPanel.style.width = Math.max(0, 1780 - (right || 300) - 40) + 'px';
     calPanel.style.top = top + 'px';
     calPanel.style.height = Math.max(0, bottom - top) + 'px';
   }
   function syncLightPopupGeometry(popupEl) {
-    if (S.c.layout !== 'list' || !utilsEl.children.length) { popupEl.style.top = popupEl.style.right = popupEl.style.transform = ''; return; }
-    // The Lights control is always first when shown (see utils()). Sit just left of it,
-    // vertically centred on its own height, rather than guessing a fixed offset.
+    if (S.c.layout !== 'list' || !utilsEl.children.length) { popupEl.style.top = popupEl.style.left = popupEl.style.right = popupEl.style.transform = ''; return; }
+    // The Lights control is always first when shown (see utils()). List's controls now run
+    // horizontally along the bottom, so sit just above the button (its own rendered height plus
+    // a 24px gap - same gap as before, just the other axis), horizontally centred on it.
     var btn = utilsEl.children[0];
-    var x = utilsEl.offsetLeft + btn.offsetLeft, y = utilsEl.offsetTop + btn.offsetTop + btn.offsetHeight / 2;
-    popupEl.style.right = (1920 - x + 24) + 'px';
-    popupEl.style.top = y + 'px';
-    popupEl.style.transform = 'translateY(-50%)';
+    var x = utilsEl.offsetLeft + btn.offsetLeft + btn.offsetWidth / 2, rowTop = utilsEl.offsetTop;
+    popupEl.style.left = x + 'px';
+    popupEl.style.top = (rowTop - popupEl.offsetHeight - 24) + 'px';
+    popupEl.style.transform = 'translateX(-50%)';
   }
 
   function clockText() {
@@ -1268,7 +1276,10 @@
     return '<button type="button" tabindex="-1" class="u' + (extra || '') + '" data-z="' + z + '" data-i="' + i + '" data-action="' + action + '" aria-label="' + esc(name) + '"><span class="u-content">' + inner + '</span></button>';
   }
   function renderUtils(hs) {
-    var html = '', style = hs.mode === 'arrange' && S.c.controls !== 'text' ? 'both' : S.c.controls;
+    // List always forces icons-only now: with the controls row running horizontally along the
+    // bottom (see .l-list .quiet-utils), per-button text labels are no longer necessary - the
+    // existing icons-only focus label (below) already names whichever control is focused.
+    var html = '', style = S.c.layout === 'list' ? 'icons' : (hs.mode === 'arrange' && S.c.controls !== 'text' ? 'both' : S.c.controls);
     var iconsOnly = style === 'icons', U = utils(), focused = null;
     utilsEl.className = 'utils quiet-utils is-' + style + (hs.zone === 'util' || hs.zone === 'ctl' ? ' is-awake' : '');
     U.forEach(function (u, i) {
@@ -1285,8 +1296,11 @@
       b.className = b.className.replace(/\s+is-focus/g, '') + (focus ? ' is-focus' : '');
       if (focus) focused = b;
     });
-    renderUtilFocusLabel(iconsOnly ? focused : null);
-    renderUtilityLens(focused, iconsOnly);
+    // List never shows a name, hover or otherwise - the icon row sits in the bottom controls
+    // bar where the existing focus ring/lens affordance is enough; a popping-up label there
+    // read as unwanted hover text. Dock (its icons-only mode) keeps the label as before.
+    renderUtilFocusLabel(iconsOnly && S.c.layout !== 'list' ? focused : null);
+    renderUtilityLens(focused);
   }
   function renderUtilFocusLabel(button) {
     var text, key, r, sr, scale, width, x;
@@ -1300,13 +1314,14 @@
     }
     r = button.getBoundingClientRect(); sr = sceneEl.getBoundingClientRect(); scale = sr.width / 1920 || 1;
     width = Math.ceil(textWidth(text, 28, 500, -.2) + 8); x = (r.left + r.width / 2 - sr.left) / scale - width / 2;
-    if (S.c.layout === 'list') x = 1730 - width;
     utilFocusLabel.style.width = width + 'px'; utilFocusLabel.style.left = clamp(x, 112, 1808 - width) + 'px';
-    utilFocusLabel.style.top = ((S.c.layout === 'list' ? (r.top + r.height / 2 - sr.top) / scale - 19 : 140) + fontShift('ui', 28)) + 'px';
+    // List's row now runs horizontally along the bottom (every button shares the same top), so
+    // the label sits above the row (its own 36px height plus a 16px gap) instead of beside it.
+    utilFocusLabel.style.top = ((S.c.layout === 'list' ? (r.top - sr.top) / scale - 52 : 140) + fontShift('ui', 28)) + 'px';
     utilFocusLabel.className = 'util-focus-label is-on';
   }
-  function renderUtilityLens(button, iconsOnly) {
-    var r, label, sr, scale, x, y, width, key, el;
+  function renderUtilityLens(button) {
+    var r, sr, scale, x, y, width, key, el;
     if (!button || S.c.focus !== 'glass') {
       utPlates.forEach(function (plateEl) { plateEl.className = 'ph-plate ut-lens is-outgoing'; });
       utPlateKey = null;
@@ -1314,14 +1329,9 @@
     }
     r = button.getBoundingClientRect(); sr = sceneEl.getBoundingClientRect(); scale = sr.width / 1920 || 1;
     y = (r.top - sr.top) / scale + 2;
-    if (S.c.layout === 'list') {
-      label = iconsOnly ? utilFocusLabel : button.querySelector('.u-label');
-      x = (label.getBoundingClientRect().left - sr.left) / scale - 24;
-      width = 1800 - x;
-    } else {
-      // Dock icons keep a fixed lens; the separate caption cannot overlap its neighbours.
-      x = (r.left - sr.left) / scale; width = r.width / scale;
-    }
+    // Both layouts now run the controls as a horizontal row, so the lens just wraps whichever
+    // icon is focused, the same way in either one.
+    x = (r.left - sr.left) / scale; width = r.width / scale;
     key = button.getAttribute('data-action') + '|' + x + '|' + y + '|' + width;
     if (key !== utPlateKey) {
       utPlates[utPlateIndex].className = 'ph-plate ut-lens is-outgoing';
