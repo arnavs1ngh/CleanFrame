@@ -71,6 +71,30 @@ toggle - no separate endpoint or panel needed.
 Compute: house-api. The TV just renders whichever tile has the flag,
 exactly like `quick`.
 
+### `tiles.data[].home` (boolean, optional)
+
+Example: `{ "id": "fireplace", "label": "Fireplace", "icon": "scene", "kind": "button", "state": null, "home": true }`
+
+Why: a third slot, independent of `quick` and `settings` (a tile has at
+most one of the three) - gives any number of one-shot automations their
+own icon directly on the Home row, next to the Lights control, rather
+than needing a dedicated flag per automation. Unlike `quick`/`settings`,
+more than one tile may have it; the TV renders one icon per flagged tile,
+in whatever order they appear in `tiles.data`. No icon shows at all when
+no tile has the flag. The label shown is the tile's own `label`, not a
+hardcoded string, same reasoning as `settings`. A `home` tile's `state`
+is expected to be `null` (a one-shot press, not a toggle) - the TV never
+renders on/off for it regardless of `kind`. Pressing it sends
+`POST /v1/actions/{id}` with no body, same as any other plain press;
+repeat presses are ignored while the request is in flight, and for about
+15 seconds after a successful one (house-api itself has no further state
+to report back for a fireplace press - `ok: true` only means Home
+Assistant accepted it, not that anything downstream, like the YouTube
+video it starts, has actually happened yet).
+
+Compute: house-api. The TV just renders whichever tiles have the flag,
+same pattern as `quick`/`settings`.
+
 ### `tiles.data[].brightness` (number 0-100, optional)
 
 Example: `{ "brightness": 72 }`
@@ -160,6 +184,13 @@ body sent still toggles its `state` as before.
 Compute: house-api must accept a partial update (only the fields that
 changed) and return the tile's full resulting state in `{ ok, tile }`, not
 require every field on every call.
+
+A `kind: "button"` tile (e.g. `home`-flagged automations like Fireplace)
+is the opposite case: it takes no body at all, and house-api is expected
+to reject one with `400` rather than silently ignore it, since there's
+nothing for it to mean. The TV never sends one for these. The mock
+replicates this: a `kind: "button"` tile's action 400s if a body is
+present, regardless of its contents.
 
 ## Icon vocabulary (provisional, not locked)
 

@@ -111,6 +111,11 @@ def handle_post_action(handler, tile_id, query, body):
     key = (scenario, tile_id)
     if key in _overrides:
         tile.update(_overrides[key])
+    # A button tile (e.g. a one-shot automation press like Fireplace) takes no parameters -
+    # a body means the caller got the contract wrong, not a tile adjustment.
+    if tile.get('kind') == 'button' and body:
+        _send_json(handler, 400, {'error': 'This action takes no body'})
+        return
     if fail:
         _send_json(handler, 200, {'ok': False, 'tile': tile})
         return

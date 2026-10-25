@@ -217,7 +217,8 @@
         "label": "Good morning",
         "icon": "scene",
         "kind": "scene",
-        "state": null
+        "state": null,
+        "home": true
       },
       {
         "id": "away-scene",
@@ -233,6 +234,14 @@
         "kind": "toggle",
         "state": "on",
         "settings": true
+      },
+      {
+        "id": "fireplace",
+        "label": "Fireplace",
+        "icon": "scene",
+        "kind": "button",
+        "state": null,
+        "home": true
       }
     ]
   }
