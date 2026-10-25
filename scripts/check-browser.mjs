@@ -96,14 +96,17 @@ async function page(options = {}) {
   let houseApiState = null;
   if (options.houseApi) {
     const initialTiles = Array.isArray(options.houseApi) ? options.houseApi : [options.houseApi];
-    houseApiState = { tiles: initialTiles.map(t => ({ ...t })), actionCalls: [] };
+    houseApiState = { tiles: initialTiles.map(t => ({ ...t })), actionCalls: [], homeCalls: 0 };
     await current.route('**/house-api-config.js', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: "var HOUSE_API_BASE = '/qa-house-api';" }));
-    await current.route('**/qa-house-api/v1/home', route => route.fulfill({
-      status: 200, contentType: 'application/json',
-      body: JSON.stringify({ meta: { version: 1, generated_at: new Date().toISOString(), refresh_after_s: 3600 },
-        weather: { status: 'error', stale: false, data: null }, calendar: { status: 'error', stale: false, data: null },
-        tiles: { status: 'ok', stale: false, data: houseApiState.tiles } })
-    }));
+    await current.route('**/qa-house-api/v1/home', route => {
+      houseApiState.homeCalls++;
+      return route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ meta: { version: 1, generated_at: new Date().toISOString(), refresh_after_s: 3600 },
+          weather: { status: 'error', stale: false, data: null }, calendar: { status: 'error', stale: false, data: null },
+          tiles: { status: 'ok', stale: false, data: houseApiState.tiles } })
+      });
+    });
     await current.route('**/qa-house-api/v1/actions/**', async route => {
       const raw = route.request().postData();
       const body = raw ? JSON.parse(raw) : {};
@@ -916,10 +919,37 @@ try {
     await page({ houseApi: QA_LIGHT });
     await nav('up');
     await current.keyboard.down('Enter');
+    await current.waitForTimeout(80); // well under the long-press threshold
+    await current.keyboard.up('Enter');
+    await current.waitForFunction(() => /is-on/.test(document.querySelector('.utils .u').className));
+    check('A genuine quick tap (real keydown/keyup, released early) still toggles exactly once',
+      current.__houseApi.actionCalls.length === 1 && (await call('where')).view === 'home', current.__houseApi.actionCalls);
+    await closePage();
+
+    await page({ houseApi: QA_LIGHT });
+    const homeCallsAtLoad = current.__houseApi.homeCalls;
+    // Simulate the bulb changing outside CleanFrame (another app, a physical switch, the
+    // automation) between the initial load and the moment the popup is opened.
+    current.__houseApi.tiles[0].brightness = 35;
+    await nav('up');
+    await current.keyboard.down('Enter');
+    await current.waitForFunction(() => ShoreQA.where().view === 'light', null, { timeout: 2000 });
+    await current.keyboard.up('Enter');
+    check('Holding OK to open the popup forces a fresh house-api fetch rather than reusing the stale poll',
+      current.__houseApi.homeCalls > homeCallsAtLoad, current.__houseApi.homeCalls);
+    const openedBrightness = (await current.locator('.light-row-value').first().textContent()).trim();
+    check('The popup opens showing the bulb\'s current brightness, not the value from before the long press',
+      openedBrightness === '35%', openedBrightness);
+    await current.keyboard.down('Escape'); await current.keyboard.up('Escape'); // back out without sending anything
+    await closePage();
+
+    await page({ houseApi: QA_LIGHT });
+    await nav('up');
+    await current.keyboard.down('Enter');
     await current.waitForFunction(() => ShoreQA.where().view === 'light', null, { timeout: 2000 });
     check('Holding OK opens the brightness/colour popup', (await call('where')).view === 'light');
     await current.keyboard.up('Enter');
-    check('Opening the popup did not swallow the short-press toggle underneath it', current.__houseApi.actionCalls.length === 1, current.__houseApi.actionCalls);
+    check('Holding OK to open the popup does not also fire the short-press toggle', current.__houseApi.actionCalls.length === 0, current.__houseApi.actionCalls);
     check('Compact popup renders, no full-screen title', await current.locator('.light-popup').isVisible());
     const veilDisplay = await current.locator('.sheet-veil').evaluate(el => getComputedStyle(el).display);
     check('The full-screen sheet veil is suppressed so Home stays visible behind the popup', veilDisplay === 'none', veilDisplay);
@@ -931,10 +961,10 @@ try {
     check('A swatch shows the focus ring immediately on arrival, before any left/right',
       await current.locator('.light-swatch.is-focus').count() === 1, await current.locator('.light-swatch').evaluateAll(els => els.map(e => e.className)));
     await nav('right'); // pick a swatch - sets colour mode without a separate tab
-    check('Adjustments never call the API on their own - only OK sends anything', current.__houseApi.actionCalls.length === 1, current.__houseApi.actionCalls);
+    check('Adjustments never call the API on their own - only OK sends anything', current.__houseApi.actionCalls.length === 0, current.__houseApi.actionCalls);
 
     await nav('back'); // cancel
-    check('Back closes without sending the pending adjustment', current.__houseApi.actionCalls.length === 1 && (await call('where')).view === 'home');
+    check('Back closes without sending the pending adjustment', current.__houseApi.actionCalls.length === 0 && (await call('where')).view === 'home');
 
     await current.keyboard.down('Enter');
     await current.waitForFunction(() => ShoreQA.where().view === 'light', null, { timeout: 2000 });
@@ -942,8 +972,10 @@ try {
     for (let i = 0; i < 2; i++) await nav('right'); // brightness 60 -> 70
     await nav('ok');
     const committed = current.__houseApi.actionCalls.at(-1);
-    check('OK sends the adjustment and closes the popup in one step',
-      current.__houseApi.actionCalls.length === 3 && committed.body.brightness === 70 && (await call('where')).view === 'home', current.__houseApi.actionCalls);
+    check('OK sends the adjustment and closes the popup in one step, with no spurious toggle from either long-press',
+      current.__houseApi.actionCalls.length === 1 && committed.body.brightness === 70 && (await call('where')).view === 'home', current.__houseApi.actionCalls);
+    check('The adjustment explicitly turns the light on, so it also works while the light was off',
+      committed.body.state === 'on', committed.body);
   });
   await run('Light colour temperature range', async () => {
     const QA_RANGE_LIGHT = { id: 'qa-range-light', label: 'Living room', icon: 'bulb', kind: 'toggle', state: 'on', quick: true, brightness: 50, color_mode: 'white', color_temp_k: 2200, color_temp_range: { min: 1801, max: 6535 }, rgb: { r: 255, g: 255, b: 255 } };

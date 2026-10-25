@@ -19,6 +19,7 @@
   var started = false;
   var homeInFlight = false;
   var actionsInFlight = {};
+  var refreshWaiters = [];
 
   function base() { return typeof window.HOUSE_API_BASE === 'string' && window.HOUSE_API_BASE ? window.HOUSE_API_BASE : ''; }
   function configured() { return !!base(); }
@@ -78,6 +79,11 @@
     } catch (e) { finish({ message: 'exception' }); }
   }
 
+  function drainWaiters(err) {
+    var waiters = refreshWaiters;
+    refreshWaiters = [];
+    for (var i = 0; i < waiters.length; i++) { try { waiters[i](err); } catch (e) { /* one bad waiter must not break the others */ } }
+  }
   function onSuccess(result) {
     backoffMs = 0;
     var cached = loadCache(), home, etag;
@@ -85,12 +91,14 @@
     else { home = result.data; etag = result.etag; saveCache(home, etag); }
     if (home && home.meta && typeof home.meta.refresh_after_s === 'number' && home.meta.refresh_after_s > 0) refreshS = home.meta.refresh_after_s;
     notify({ home: home, stale: false, error: null });
+    drainWaiters(null);
     scheduleNext(refreshS * 1000);
   }
   function onError() {
     backoffMs = backoffMs ? Math.min(backoffMs * 2, BACKOFF_CAP_MS) : BACKOFF_BASE_MS;
     var cached = loadCache();
     notify({ home: cached && cached.home, stale: true, error: { message: 'Couldn’t reach house-api.' } });
+    drainWaiters({ message: 'Couldn’t reach house-api.' });
     scheduleNext(backoffMs);
   }
 
@@ -106,6 +114,16 @@
     if (cached && cached.home) notify({ home: cached.home, stale: true, error: null });
     document.addEventListener('visibilitychange', handleVisibility);
     if (!document.hidden) fetchHome();
+  }
+
+  /* Forces an immediate GET /v1/home ahead of the next scheduled poll, so a caller about to show
+     a tile's current value (e.g. opening the Lights popup) isn't stuck with data up to
+     refresh_after_s old. Piggybacks on an already-in-flight request rather than firing a second
+     one. done (optional) fires once, after the next successful or failed fetch resolves. */
+  function refresh(done) {
+    if (!configured()) { if (done) done({ message: 'house-api is not configured.' }); return; }
+    if (done) refreshWaiters.push(done);
+    if (!homeInFlight) { clearTimeout(pollTimer); fetchHome(); }
   }
 
   /* body is optional: omit (or pass null) for a plain fire (toggle/scene/button); pass a plain
@@ -144,6 +162,7 @@
     configured: configured,
     start: start,
     subscribe: function (fn) { listeners.push(fn); },
+    refresh: refresh,
     fireAction: fireAction
   };
 }());

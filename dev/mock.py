@@ -87,7 +87,7 @@ def handle_get_home(handler, query):
     handler.wfile.write(body)
 
 
-ADJUSTABLE_FIELDS = ('brightness', 'color_mode', 'rgb', 'color_temp_k')
+ADJUSTABLE_FIELDS = ('state', 'brightness', 'color_mode', 'rgb', 'color_temp_k')
 
 
 def handle_post_action(handler, tile_id, query, body):

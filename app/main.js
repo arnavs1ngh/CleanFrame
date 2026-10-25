@@ -1048,7 +1048,10 @@
   function commitLight(t) {
     if (!t.dirty) return;
     t.dirty = false;
-    var body = { brightness: t.brightness, color_mode: t.colorMode };
+    // Explicit, not implied: adjusting brightness/colour only makes sense if the light ends up
+    // on, and a dimmer that silently no-ops against an off light (because the server didn't
+    // infer that) is exactly the "can't adjust while off" bug this removes any ambiguity about.
+    var body = { state: 'on', brightness: t.brightness, color_mode: t.colorMode };
     if (t.colorMode === 'color') body.rgb = t.rgb; else body.color_temp_k = t.colorTempK;
     HouseAPI.fireAction(t.tileId, body, function (err, resultTile) {
       if (resultTile) applyTileResult(resultTile);
@@ -2055,22 +2058,38 @@
     U = utils();
     return U[t.f.u] || null;
   }
-  var heldKeys = {}, longPressTimer = null;
+  var heldKeys = {}, longPressTimer = null, longPressArmed = false;
   document.addEventListener('keydown', function (ev) {
     var code = ev.keyCode, k = KEYS[code];
     if (code === 9) { ev.preventDefault(); return; }
     if (!k || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     ev.preventDefault();
     if (k === 'ok' || k === 'back') { if (ev.repeat || heldKeys[code]) return; heldKeys[code] = true; }
-    // Holding OK on the Lights control opens brightness/colour, in addition to (not instead of)
-    // the immediate toggle below - avoids delaying the common quick-toggle case.
-    if (k === 'ok' && !longPressTimer && focusedUtil() === 'light') {
-      longPressTimer = setTimeout(function () { longPressTimer = null; openLight(); render(); }, LIGHT_LONGPRESS_MS);
+    if (k === 'ok' && focusedUtil() === 'light') {
+      // Defer the decision instead of toggling immediately: released before the threshold is
+      // a tap (toggle, on keyup below); still held at the threshold is a hold (open
+      // brightness/colour instead). Never both - opening the popup must not also flip the
+      // light, which is confusing and makes "adjust brightness" start from a state you didn't
+      // choose.
+      longPressArmed = true;
+      // Kick off a forced refresh now rather than waiting for the next scheduled poll (up to
+      // refresh_after_s stale) - a LAN round trip normally lands well inside the long-press
+      // threshold, so by the time openLight() reads S.house below it usually already reflects
+      // the bulb's true current state, not whatever CleanFrame last polled.
+      if (window.HouseAPI) HouseAPI.refresh();
+      longPressTimer = setTimeout(function () { longPressTimer = null; longPressArmed = false; openLight(); render(); }, LIGHT_LONGPRESS_MS);
+      return;
     }
     press(k);
   });
-  document.addEventListener('keyup', function (ev) { delete heldKeys[ev.keyCode]; clearTimeout(longPressTimer); longPressTimer = null; });
-  window.addEventListener('blur', function () { heldKeys = {}; clearTimeout(longPressTimer); longPressTimer = null; });
+  document.addEventListener('keyup', function (ev) {
+    delete heldKeys[ev.keyCode];
+    if (longPressTimer) {
+      clearTimeout(longPressTimer); longPressTimer = null;
+      if (longPressArmed) { longPressArmed = false; press('ok'); }
+    }
+  });
+  window.addEventListener('blur', function () { heldKeys = {}; clearTimeout(longPressTimer); longPressTimer = null; longPressArmed = false; });
   window.addEventListener('focus', function () { release(); focusStage(); after(); updateClock(); });
   document.addEventListener('visibilitychange', function () {
     heldKeys = {};
