@@ -950,18 +950,43 @@
 
   /* ---------- Settings, Layout and messages ---------- */
   function mode() { for (var i = 0; i < MODES.length; i++) if (MODES[i].id === S.c.mode) return MODES[i]; return MODES[0]; }
+  /* Nested under the Settings list's single "Home screen" row - see settingsRows(). Each row here
+     is its own plain local toggle, same immediate apply-on-OK as the Automation row, no further
+     nesting. Gated the same way the flat rows used to be, just per item instead of for the menu
+     as a whole, so e.g. Fireplace alone still disappears if its tile stops being flagged home. */
+  function homeScreenRows() {
+    var rows = [], firstHome = homeTiles()[0];
+    if (window.HouseAPI && HouseAPI.configured()) rows.push({ id: 'calendar', label: 'Calendar', value: S.c.showCalendar ? 'On' : 'Off' });
+    if (firstHome) rows.push({ id: 'fireplace', label: firstHome.label, value: S.c.showFireplace ? 'On' : 'Off' });
+    return rows;
+  }
+  function homeScreenIds() { return homeScreenRows().map(function (r) { return r.id; }); }
+  V.homeScreen = {
+    sheet: true,
+    norm: function (t) { var ids = homeScreenIds(); if (ids.indexOf(t.f.id) < 0) t.f.id = ids[0]; },
+    key: function (t, k) {
+      var ids = homeScreenIds(), i = Math.max(0, ids.indexOf(t.f.id));
+      if (k === 'up' && i > 0) i--;
+      else if (k === 'down' && i < ids.length - 1) i++;
+      else if (k === 'back') { pop(); return; }
+      t.f.id = ids[i];
+      if (k === 'ok') toggleHomeItem(ids[i] === 'calendar' ? 'showCalendar' : 'showFireplace');
+    },
+    point: function (t, z, i, id) { if (z === 'row' && id) { t.f.id = id; this.key(t, 'ok'); } }
+  };
   function settingsRows() {
     var n = S.c.home.length, autoTile = automationTile(), rows = [{ id: 'background', label: 'Background', value: S.c.bg === 'photo' ? wall(S.c.wall).name : VALUE_NAMES[S.c.bg] },
       { id: 'layout', label: 'Layout', value: VALUE_NAMES[S.c.layout] },
       { id: 'typography', label: 'Typography', value: FONTS[S.c.font].name },
       { id: 'focus', label: 'Focus', value: VALUE_NAMES[S.c.focus] + (materialApplies() ? ', ' + VALUE_NAMES[S.c.material] : '') },
       { id: 'editor', label: 'Apps on Home', value: n + (n === 1 ? ' app' : ' apps') }];
-    // Both are plain local display choices, not house-api state - only shown when there's
-    // actually something to hide (no point offering to turn off a calendar/icon that never
-    // shows anyway). The home-icons row names whichever tile it's hiding, not a hardcoded string.
-    if (window.HouseAPI && HouseAPI.configured()) rows.push({ id: 'calendar', label: 'Calendar', value: S.c.showCalendar ? 'On' : 'Off' });
-    var firstHome = homeTiles()[0];
-    if (firstHome) rows.push({ id: 'fireplace', label: firstHome.label, value: S.c.showFireplace ? 'On' : 'Off' });
+    // One nested row rather than one flat row per item - see homeScreenRows(). Only shown when
+    // there's actually something in it to toggle (no point opening an empty menu).
+    var homeScreen = homeScreenRows();
+    if (homeScreen.length) {
+      var onCount = homeScreen.filter(function (r) { return r.value === 'On'; }).length;
+      rows.push({ id: 'homeScreen', label: 'Home screen', value: onCount === 0 ? 'Off' : onCount === homeScreen.length ? 'On' : onCount + ' of ' + homeScreen.length + ' on' });
+    }
     if (autoTile) rows.push({ id: 'automation', label: autoTile.label, value: S.automationStatus === 'sending' ? 'Sending…' : S.automationStatus === 'failed' ? 'Couldn’t reach house-api.' : (autoTile.state === 'on' ? 'On' : 'Off') });
     rows.push({ id: 'samsung', label: 'Samsung', value: 'Home and TV settings' });
     return rows;
@@ -983,8 +1008,7 @@
   function settingsOk(id) {
     if (id === 'editor') openEditor('settings');
     else if (id === 'automation') automationToggle();
-    else if (id === 'calendar') toggleHomeItem('showCalendar');
-    else if (id === 'fireplace') toggleHomeItem('showFireplace');
+    else if (id === 'homeScreen') push({ id: 'homeScreen', f: { id: homeScreenIds()[0] } });
     else openAppearance(id);
   }
   var DETAIL_NAMES = { background: 'Background', layout: 'Layout', typography: 'Typography', focus: 'Focus', rotation: 'Rotation', samsung: 'Samsung' };
@@ -1798,6 +1822,7 @@
         + '<div class="row-cue editor-before" data-slot="otherBefore" aria-hidden="true">' + icon('up') + '</div><div class="row-cue editor-after" data-slot="otherAfter" aria-hidden="true">' + icon('down') + '</div>';
     },
     settings: function () { return '<h2 class="s-title">Settings</h2><div class="settings-overview" data-slot="list"></div><p class="settings-overview-hint"><span class="remote-key">OK</span><span>Open selected group</span></p>'; },
+    homeScreen: function () { return '<h2 class="s-title">Home screen</h2><div class="settings-overview" data-slot="list"></div><p class="settings-overview-hint"><span class="remote-key">OK</span><span>Turn on or off</span></p>'; },
     message: function (t) {
       var m = messageContent(t);
       return '<h2 class="msg-title">' + esc(m.title) + '</h2><p class="msg-line">' + esc(m.line) + '</p><p class="msg-note">' + esc(m.note) + '</p><div class="msg-acts" data-slot="acts"></div>';
@@ -1901,6 +1926,13 @@
         html += '<button type="button" tabindex="-1" class="settings-group' + (r.id === t.f.id ? ' is-focus' : '') + '" data-z="row" data-i="0" data-id="' + r.id + '" data-action="settings.' + (r.id === 'editor' ? 'editor' : 'group.' + r.id) + '"><span class="settings-group-copy"><span class="settings-group-name">' + esc(r.label) + '</span><span class="settings-group-value">' + esc(r.value) + '</span></span>' + icon('right') + '</button>';
       });
       el.list.className = 'settings-overview' + (rows.length > 6 ? ' is-dense' : '');
+      setHTML(el.list, html);
+    },
+    homeScreen: function (t, el) {
+      var html = '', rows = homeScreenRows();
+      rows.forEach(function (r) {
+        html += '<button type="button" tabindex="-1" class="settings-group' + (r.id === t.f.id ? ' is-focus' : '') + '" data-z="row" data-i="0" data-id="' + r.id + '" data-action="homeScreen.' + r.id + '"><span class="settings-group-copy"><span class="settings-group-name">' + esc(r.label) + '</span><span class="settings-group-value">' + esc(r.value) + '</span></span>' + icon('right') + '</button>';
+      });
       setHTML(el.list, html);
     },
     message: function (t, el) {

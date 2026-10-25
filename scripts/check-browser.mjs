@@ -1060,7 +1060,7 @@ try {
     await page(); // unconfigured: no house-api at all
     await scene('settings');
     const noConfigRows = await current.locator('.settings-group-name').allTextContents();
-    check('No Calendar or Fireplace row without house-api configured', !noConfigRows.includes('Calendar') && !noConfigRows.includes('Fireplace'), noConfigRows);
+    check('No Home screen row without house-api configured', !noConfigRows.includes('Home screen'), noConfigRows);
     await closePage();
 
     await page({ houseApi: [QA_FIRE], houseApiCalendar: QA_DAYS });
@@ -1070,19 +1070,31 @@ try {
 
     await scene('settings');
     const rowNames = await current.locator('.settings-group-name').allTextContents();
-    check('Calendar row present (house-api configured) and defaults to On', rowNames.includes('Calendar') && await current.locator('.settings-group').filter({ hasText: 'Calendar' }).locator('.settings-group-value').textContent() === 'On');
-    check("Fireplace row uses the tile's own label and defaults to On", rowNames.includes('Fireplace') && await current.locator('.settings-group').filter({ hasText: 'Fireplace' }).locator('.settings-group-value').textContent() === 'On');
+    check('Both items folded into a single Home screen row, not two flat ones', rowNames.includes('Home screen') && !rowNames.includes('Calendar') && !rowNames.includes('Fireplace'), rowNames);
+    check("Home screen row summarises both On", await current.locator('.settings-group').filter({ hasText: 'Home screen' }).locator('.settings-group-value').textContent() === 'On');
 
-    await act('settings.group.calendar');
+    await act('settings.group.homeScreen');
+    check('Opens its own nested menu', (await call('where')).view === 'homeScreen');
+    const nestedNames = await current.locator('.settings-group-name').allTextContents();
+    check("Nested menu has Calendar and the tile's own label, both On", nestedNames.includes('Calendar') && nestedNames.includes('Fireplace')
+      && await current.locator('.settings-group').filter({ hasText: 'Calendar' }).locator('.settings-group-value').textContent() === 'On'
+      && await current.locator('.settings-group').filter({ hasText: 'Fireplace' }).locator('.settings-group-value').textContent() === 'On');
+
+    await act('homeScreen.calendar');
     await current.waitForFunction(() => [...document.querySelectorAll('.settings-group-value')].some(e => e.textContent.trim() === 'Off'));
-    await act('settings.group.fireplace');
+    await act('homeScreen.fireplace');
+    await nav('back');
+    check('Back returns to Settings; row summary now reads Off', (await call('where')).view === 'settings'
+      && await current.locator('.settings-group').filter({ hasText: 'Home screen' }).locator('.settings-group-value').textContent() === 'Off');
+
     await scene('home');
     check('Calendar panel hides once turned off', !(await current.locator('.cal-panel').isVisible()));
     const utilNames2 = await current.locator('.utils .u').allTextContents();
     check('Fireplace icon hides once turned off, Lights/Apps/Settings unaffected', !utilNames2.includes('Fireplace') && utilNames2.includes('Light'), utilNames2);
 
     await scene('settings');
-    await act('settings.group.calendar'); await act('settings.group.fireplace');
+    await act('settings.group.homeScreen');
+    await act('homeScreen.calendar'); await act('homeScreen.fireplace');
     await scene('home');
     check('Both turn back on', await current.locator('.cal-panel').isVisible() && (await current.locator('.utils .u').allTextContents()).includes('Fireplace'));
   });
