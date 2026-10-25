@@ -1156,7 +1156,7 @@
   }
   function spanKey(ev) { return ev.title + '|' + (ev.calendar || '') + '|' + ev.span.start_date + '|' + ev.span.end_date; }
   function calendarEventHtml(ev, seenSpans) {
-    var cls = 'cal-event' + (ev.all_day ? ' is-allday' : '') + (ev.redacted ? ' is-redacted' : '');
+    var cls = 'cal-event' + (ev.all_day ? ' is-allday' : '');
     var time = !ev.all_day && ev.time ? '<span class="cal-ev-time">' + esc(ev.time) + '</span>' : '';
     var continuing = false, span = '';
     if (ev.all_day && ev.span && ev.span.end_date) {

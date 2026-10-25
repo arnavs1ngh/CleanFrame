@@ -49,64 +49,56 @@
               "end": "08:00",
               "all_day": false,
               "title": "Gym",
-              "calendar": "Personal",
-              "redacted": false
+              "calendar": "Personal"
             },
             {
               "time": "09:00",
               "end": "09:30",
               "all_day": false,
               "title": "Standup",
-              "calendar": "Work",
-              "redacted": false
+              "calendar": "Work"
             },
             {
               "time": "12:00",
               "end": "13:00",
               "all_day": false,
               "title": "Lunch with Priya",
-              "calendar": "Personal",
-              "redacted": false
+              "calendar": "Personal"
             },
             {
               "time": "14:00",
               "end": "15:00",
               "all_day": false,
               "title": "Dentist",
-              "calendar": "Personal",
-              "redacted": false
+              "calendar": "Personal"
             },
             {
               "time": "16:00",
               "end": "17:00",
               "all_day": false,
               "title": "Design review",
-              "calendar": "Work",
-              "redacted": false
+              "calendar": "Work"
             },
             {
               "time": "18:30",
               "end": "19:30",
               "all_day": false,
               "title": "Pick up parcel",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             },
             {
               "time": "19:30",
               "end": "21:00",
               "all_day": false,
               "title": "House dinner",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             },
             {
               "time": "21:30",
               "end": "22:30",
               "all_day": false,
               "title": "Call with Mum",
-              "calendar": "Personal",
-              "redacted": false
+              "calendar": "Personal"
             }
           ]
         },
@@ -118,40 +110,35 @@
               "end": "08:30",
               "all_day": false,
               "title": "Gym",
-              "calendar": "Personal",
-              "redacted": false
+              "calendar": "Personal"
             },
             {
               "time": "09:00",
               "end": "17:00",
               "all_day": false,
               "title": "Offsite",
-              "calendar": "Work",
-              "redacted": false
+              "calendar": "Work"
             },
             {
               "time": "18:00",
               "end": "19:00",
               "all_day": false,
               "title": "Football practice",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             },
             {
               "time": "19:30",
               "end": "20:30",
               "all_day": false,
               "title": "Dinner with the Clarks",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             },
             {
               "time": "21:00",
               "end": "22:00",
               "all_day": false,
               "title": "Book club",
-              "calendar": "Personal",
-              "redacted": false
+              "calendar": "Personal"
             }
           ]
         },
@@ -163,24 +150,21 @@
               "end": "10:00",
               "all_day": false,
               "title": "1:1 with manager",
-              "calendar": "Work",
-              "redacted": false
+              "calendar": "Work"
             },
             {
               "time": "13:00",
               "end": "14:00",
               "all_day": false,
               "title": "Vet appointment",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             },
             {
               "time": "19:00",
               "end": "20:30",
               "all_day": false,
               "title": "Parents' evening",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             }
           ]
         },
@@ -192,24 +176,21 @@
               "end": "08:00",
               "all_day": false,
               "title": "Gym",
-              "calendar": "Personal",
-              "redacted": false
+              "calendar": "Personal"
             },
             {
               "time": "10:00",
               "end": "11:00",
               "all_day": false,
               "title": "Quarterly review",
-              "calendar": "Work",
-              "redacted": false
+              "calendar": "Work"
             },
             {
               "time": "18:00",
               "end": "19:00",
               "all_day": false,
               "title": "Piano lesson",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             }
           ]
         },
@@ -221,16 +202,14 @@
               "end": "09:30",
               "all_day": false,
               "title": "Standup",
-              "calendar": "Work",
-              "redacted": false
+              "calendar": "Work"
             },
             {
               "time": "17:30",
               "end": "23:00",
               "all_day": false,
               "title": "Work drinks",
-              "calendar": "Work",
-              "redacted": false
+              "calendar": "Work"
             }
           ]
         },
@@ -242,24 +221,21 @@
               "end": "12:00",
               "all_day": false,
               "title": "Farmers' market",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             },
             {
               "time": "13:00",
               "end": "16:00",
               "all_day": false,
               "title": "Garden tidy-up",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             },
             {
               "time": "19:00",
               "end": "22:00",
               "all_day": false,
               "title": "Dinner party",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             }
           ]
         },
@@ -271,8 +247,7 @@
               "end": "12:30",
               "all_day": false,
               "title": "Brunch",
-              "calendar": "Personal",
-              "redacted": false
+              "calendar": "Personal"
             }
           ]
         }

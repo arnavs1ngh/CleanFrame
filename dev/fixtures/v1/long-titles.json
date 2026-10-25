@@ -44,16 +44,14 @@
               "end": "21:00",
               "all_day": false,
               "title": "Extended family dinner with the Okafor-Whitfields and the new neighbours from number fourteen",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             },
             {
               "time": "21:30",
               "end": "22:00",
               "all_day": false,
               "title": "Quarterly household budget and renovation planning review",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             }
           ]
         },
@@ -65,8 +63,7 @@
               "end": "17:00",
               "all_day": false,
               "title": "Annual all-hands offsite and strategic planning workshop",
-              "calendar": "Work",
-              "redacted": false
+              "calendar": "Work"
             }
           ]
         },

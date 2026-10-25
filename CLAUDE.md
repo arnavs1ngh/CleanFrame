@@ -27,7 +27,7 @@ does today.
 
 `dev/fixtures/v1/*.json` holds one `/v1/home` response per scenario:
 `normal`, `quiet-day`, `busy-week`, `long-titles`, `all-day-and-multiday`,
-`redacted`, `ha-down`, `weather-missing`, `many-tiles`, `night`,
+`ha-down`, `weather-missing`, `many-tiles`, `night`,
 `stale-everything`. These are the house-api spec in progress - when the
 UI needs a field, behaviour or limit not in the starting shape, add it to
 the fixtures and log it in `docs/api-needs.md`.
@@ -72,7 +72,7 @@ request URL. Run it after any change to the weather strip, calendar panel or the
 Lights control/popup and review the contact sheet before calling a UI
 piece done - see the workflow in the house-api-ui task description
 (`normal.json` first, then every scenario, especially `long-titles`,
-`busy-week`, `ha-down`, `redacted` and `night`).
+`busy-week`, `ha-down` and `night`).
 
 ## Lights control (replaces the old webhook integration)
 

@@ -45,7 +45,6 @@
               "all_day": true,
               "title": "Half-term holidays",
               "calendar": "House",
-              "redacted": false,
               "span": {
                 "start_date": "2026-10-24",
                 "end_date": "2026-11-02"
@@ -56,8 +55,7 @@
               "end": "21:00",
               "all_day": false,
               "title": "House dinner",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             }
           ]
         },
@@ -70,7 +68,6 @@
               "all_day": true,
               "title": "Half-term holidays",
               "calendar": "House",
-              "redacted": false,
               "span": {
                 "start_date": "2026-10-24",
                 "end_date": "2026-11-02"
@@ -87,7 +84,6 @@
               "all_day": true,
               "title": "Half-term holidays",
               "calendar": "House",
-              "redacted": false,
               "span": {
                 "start_date": "2026-10-24",
                 "end_date": "2026-11-02"
@@ -99,7 +95,6 @@
               "all_day": true,
               "title": "Grandma visiting",
               "calendar": "Personal",
-              "redacted": false,
               "span": {
                 "start_date": "2026-10-26",
                 "end_date": "2026-10-28"
@@ -116,7 +111,6 @@
               "all_day": true,
               "title": "Half-term holidays",
               "calendar": "House",
-              "redacted": false,
               "span": {
                 "start_date": "2026-10-24",
                 "end_date": "2026-11-02"
@@ -128,7 +122,6 @@
               "all_day": true,
               "title": "Grandma visiting",
               "calendar": "Personal",
-              "redacted": false,
               "span": {
                 "start_date": "2026-10-26",
                 "end_date": "2026-10-28"
@@ -145,7 +138,6 @@
               "all_day": true,
               "title": "Half-term holidays",
               "calendar": "House",
-              "redacted": false,
               "span": {
                 "start_date": "2026-10-24",
                 "end_date": "2026-11-02"
@@ -162,7 +154,6 @@
               "all_day": true,
               "title": "Half-term holidays",
               "calendar": "House",
-              "redacted": false,
               "span": {
                 "start_date": "2026-10-24",
                 "end_date": "2026-11-02"
@@ -179,7 +170,6 @@
               "all_day": true,
               "title": "Half-term holidays",
               "calendar": "House",
-              "redacted": false,
               "span": {
                 "start_date": "2026-10-24",
                 "end_date": "2026-11-02"

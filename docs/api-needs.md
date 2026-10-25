@@ -23,21 +23,6 @@ still the inline placeholder set from Phase 3 piece 1.
 
 ## Fields added beyond the starting shape
 
-### `calendar.data.days[].events[].redacted` (boolean)
-
-Example: `{ "time": "19:30", "end": "21:00", "all_day": false, "title": "Busy", "calendar": "House", "redacted": true }`
-
-Why: the calendar visibility policy is undecided, and the UI must handle both
-full event titles and redacted ones (see `dev/fixtures/v1/redacted.json`).
-Detecting "redacted" by matching `title === "Busy"` would be fragile (a real
-event could legitimately be titled "Busy") and would silently break if the
-redaction placeholder text ever changes. An explicit flag lets the UI style a
-redacted event distinctly (e.g. muted/italic) without guessing from text.
-
-Compute: house-api. It's the one that knows which calendar's events are
-being redacted and why; the TV only needs to know whether to render the
-muted treatment.
-
 ### `calendar.data.days[].events[].span` (object, optional)
 
 Example: `{ "start_date": "2026-10-24", "end_date": "2026-11-02" }`
@@ -148,6 +133,18 @@ breaking the tile/weather row.
   `snow`, `fog`, `wind`
 - Tiles: `bulb`, `lock`, `thermostat`, `blinds`, `fan`, `plug`, `tv`,
   `speaker`, `camera`, `scene`
+
+## Dropped: redacted calendar events
+
+Earlier drafts had `calendar.data.days[].events[].redacted` (boolean) and a
+`redacted.json` fixture scenario, for a calendar-visibility policy that
+doesn't exist yet - no decision has been made about whether or how personal
+events get hidden from a shared screen. Speculative complexity for a
+problem that isn't real yet: dropped from the UI, the fixtures and this
+spec. If that policy gets decided later, house-api can just send whatever
+`title` it wants the TV to show (including a placeholder like "Busy") -
+the UI renders event titles as plain text regardless of their source, so
+no client-side redaction awareness is needed either way.
 
 ## Dropped: remote colour-key (F1-F4) mapping
 

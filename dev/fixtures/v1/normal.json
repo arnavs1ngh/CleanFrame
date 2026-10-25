@@ -49,8 +49,7 @@
               "end": "21:00",
               "all_day": false,
               "title": "House dinner",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             }
           ]
         },
@@ -62,8 +61,7 @@
               "end": "09:30",
               "all_day": false,
               "title": "Bins out",
-              "calendar": "House",
-              "redacted": false
+              "calendar": "House"
             }
           ]
         },
@@ -79,8 +77,7 @@
               "end": "19:00",
               "all_day": false,
               "title": "Book club",
-              "calendar": "Personal",
-              "redacted": false
+              "calendar": "Personal"
             }
           ]
         },
