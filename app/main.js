@@ -561,15 +561,22 @@
   /* Long press (see the keydown handler near the bottom) additionally opens this - it never
      replaces the short-press toggle above. */
   function openLight() {
-    var tile = quickTile(), rgb, swatchIndex;
+    var tile = quickTile(), rgb, swatchIndex, range, tempMin, tempMax, tempK;
     if (!tile || (tile.brightness == null && !tile.color_mode)) return;
     rgb = tile.rgb || { r: 255, g: 255, b: 255 };
     swatchIndex = LIGHT_SWATCHES.indexOf(rgbToHex(rgb));
+    // Real bulbs vary (e.g. 1801-6535K), so use the tile's own range when it sends one,
+    // falling back to the generic default only when it doesn't.
+    range = tile.color_temp_range;
+    tempMin = range && range.min != null ? range.min : LIGHT_TEMP_MIN;
+    tempMax = range && range.max != null ? range.max : LIGHT_TEMP_MAX;
+    tempK = tile.color_temp_k == null ? 4000 : tile.color_temp_k;
     push({ id: 'light', f: { zone: 'brightness' }, tileId: tile.id, dirty: false,
       brightness: tile.brightness == null ? 100 : tile.brightness,
       colorMode: tile.color_mode || 'white',
       rgb: rgb, swatchIndex: swatchIndex < 0 ? 0 : swatchIndex,
-      colorTempK: tile.color_temp_k == null ? 4000 : tile.color_temp_k });
+      tempMin: tempMin, tempMax: tempMax,
+      colorTempK: clamp(tempK, tempMin, tempMax) });
   }
   function addAppsRoute() { openEditor('home'); }
   function openSettings() { push({ id: 'settings', f: { id: S.settingsFocus } }); }
@@ -1058,7 +1065,7 @@
       if (k === 'down' && zi < LIGHT_ZONES.length - 1) { t.f.zone = LIGHT_ZONES[zi + 1]; return; }
       if (k !== 'left' && k !== 'right') return;
       if (t.f.zone === 'brightness') { t.brightness = clamp(t.brightness + (k === 'right' ? LIGHT_BRIGHT_STEP : -LIGHT_BRIGHT_STEP), 0, 100); t.dirty = true; }
-      else if (t.f.zone === 'white') { t.colorTempK = clamp(t.colorTempK + (k === 'right' ? LIGHT_TEMP_STEP : -LIGHT_TEMP_STEP), LIGHT_TEMP_MIN, LIGHT_TEMP_MAX); t.colorMode = 'white'; t.dirty = true; }
+      else if (t.f.zone === 'white') { t.colorTempK = clamp(t.colorTempK + (k === 'right' ? LIGHT_TEMP_STEP : -LIGHT_TEMP_STEP), t.tempMin, t.tempMax); t.colorMode = 'white'; t.dirty = true; }
       else if (t.f.zone === 'swatches') {
         // Cursor position is tracked explicitly (not derived from matching t.rgb to a preset)
         // so the focus ring shows immediately on arrival, even before the first left/right.
@@ -1819,7 +1826,7 @@
       setHTML(el.brightnessSlider, '<div class="light-slider-fill" style="width:' + t.brightness + '%"></div>');
       setHTML(el.brightnessValue, t.brightness + '%');
       el.whiteRow.className = 'light-row' + (wFocus ? ' is-focus' : '');
-      pct = (t.colorTempK - LIGHT_TEMP_MIN) / (LIGHT_TEMP_MAX - LIGHT_TEMP_MIN) * 100;
+      pct = (t.colorTempK - t.tempMin) / (t.tempMax - t.tempMin) * 100;
       setHTML(el.tempTrack, '<div class="light-temp-fill" style="left:' + pct + '%"></div>');
       setHTML(el.tempValue, t.colorTempK + 'K');
       el.swatches.className = 'light-swatches' + (sFocus ? ' is-focus' : '');

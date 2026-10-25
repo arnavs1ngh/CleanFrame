@@ -945,6 +945,21 @@ try {
     check('OK sends the adjustment and closes the popup in one step',
       current.__houseApi.actionCalls.length === 3 && committed.body.brightness === 70 && (await call('where')).view === 'home', current.__houseApi.actionCalls);
   });
+  await run('Light colour temperature range', async () => {
+    const QA_RANGE_LIGHT = { id: 'qa-range-light', label: 'Living room', icon: 'bulb', kind: 'toggle', state: 'on', quick: true, brightness: 50, color_mode: 'white', color_temp_k: 2200, color_temp_range: { min: 1801, max: 6535 }, rgb: { r: 255, g: 255, b: 255 } };
+    await page({ houseApi: QA_RANGE_LIGHT });
+    await nav('up');
+    await current.keyboard.down('Enter');
+    await current.waitForFunction(() => ShoreQA.where().view === 'light', null, { timeout: 2000 });
+    await current.keyboard.up('Enter');
+    await nav('down'); // white zone
+    await nav('left'); // 2200 -> 2000; only possible if the tile's own 1801 floor is used, not a 2200 default
+    let value = (await current.locator('.light-row-value').nth(1).textContent()).trim();
+    check("White slider honours the tile's own color_temp_range, not a hard-coded default", value === '2000K', value);
+    for (let i = 0; i < 10; i++) await nav('left'); // far enough to hit the floor either way
+    value = (await current.locator('.light-row-value').nth(1).textContent()).trim();
+    check("White slider clamps at the tile's own minimum (1801K), not a different default", value === '1801K', value);
+  });
   await run('Automation settings row', async () => {
     const QA_AUTO = { id: 'movie-time-lights', label: 'Movie time lights', icon: 'bulb', kind: 'toggle', state: 'off', settings: true };
     await page(); // unconfigured
