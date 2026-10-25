@@ -995,6 +995,44 @@ try {
     value = (await current.locator('.light-row-value').nth(1).textContent()).trim();
     check("White slider clamps at the tile's own minimum (1801K), not a different default", value === '1801K', value);
   });
+  await run('Remote colour-key shortcut', async () => {
+    const QA_LIGHT = { id: 'qa-light', label: 'Living room', icon: 'bulb', kind: 'toggle', state: 'off', quick: true, brightness: 42, color_mode: 'white', color_temp_k: 4000, rgb: { r: 255, g: 255, b: 255 } };
+    const QA_DIMMER = { id: 'qa-dimmer', label: 'Hallway', icon: 'bulb', kind: 'toggle', state: 'off', quick: true, brightness: 70 }; // no color_mode: brightness-only, no colour capability
+    const colorKeydown = code => current.evaluate(c => {
+      const ev = new KeyboardEvent('keydown', { bubbles: true, cancelable: true });
+      Object.defineProperty(ev, 'keyCode', { get: () => c });
+      document.dispatchEvent(ev);
+    }, code);
+
+    await page({ houseApi: QA_LIGHT });
+    await nav('up'); // focus Light, same as any other util
+    await colorKeydown(403); // ColorF0Red
+    await current.waitForTimeout(250);
+    let body = current.__houseApi.actionCalls[0]?.body;
+    check('Red sets the light to the matching preset, turning it on', body?.state === 'on' && body?.color_mode === 'color' && JSON.stringify(body.rgb) === JSON.stringify({ r: 239, g: 68, b: 68 }), body);
+    check("Existing brightness is preserved, not reset", body?.brightness === 42, body);
+    check('No popup opens - this is a direct, immediate commit like the short-press toggle', (await call('where')).view === 'home');
+    await closePage();
+
+    await page({ houseApi: QA_LIGHT });
+    await nav('up'); await colorKeydown(403);
+    await colorKeydown(404); // repeat (a different key, even) while the first is still in flight
+    await current.waitForTimeout(250);
+    check('A second colour-key press while one is in flight is ignored, same guard as the toggle', current.__houseApi.actionCalls.length === 1, current.__houseApi.actionCalls);
+    await closePage();
+
+    await page({ houseApi: QA_DIMMER });
+    await nav('up'); await colorKeydown(405); // ColorF2Yellow
+    await current.waitForTimeout(250);
+    check('A tile with no colour capability at all makes this a no-op', current.__houseApi.actionCalls.length === 0, current.__houseApi.actionCalls);
+    await closePage();
+
+    await page({ houseApi: QA_LIGHT });
+    await scene('settings');
+    await colorKeydown(406); // ColorF3Blue
+    await current.waitForTimeout(250);
+    check('Only works from Home - ignored elsewhere (Settings, here)', current.__houseApi.actionCalls.length === 0, current.__houseApi.actionCalls);
+  });
   await run('Automation settings row', async () => {
     const QA_AUTO = { id: 'movie-time-lights', label: 'Movie time lights', icon: 'bulb', kind: 'toggle', state: 'off', settings: true };
     await page(); // unconfigured

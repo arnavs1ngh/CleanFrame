@@ -10,7 +10,9 @@
   var ED_ROW = 80, ED_SEP = 56, ED_VIEW = 752, STRIP_PITCH = 188;
   var PH_TOP = 220, PH_PITCH = 128, PH_FULL = 5, PH_HEIGHT = 944, PH_COMPACT_TOP = 144, PH_COMPACT_PITCH = 88, PH_COMPACT_VISIBLE = 9;
   var WALL_VISIBLE = 6, WALL_ROW = 92, WALL_DELAY = 200;
-  var KEYS = { 37: 'left', 38: 'up', 39: 'right', 40: 'down', 13: 'ok', 27: 'back', 8: 'back', 10009: 'back', 461: 'back' };
+  var KEYS = { 37: 'left', 38: 'up', 39: 'right', 40: 'down', 13: 'ok', 27: 'back', 8: 'back', 10009: 'back', 461: 'back',
+    403: 'colorRed', 404: 'colorGreen', 405: 'colorYellow', 406: 'colorBlue' };
+  var COLOR_KEY_SWATCH = { colorRed: 0, colorGreen: 4, colorYellow: 3, colorBlue: 6 };
   var FULL = 'Home holds nine apps. Remove one first.', LAST = 'Home needs one app';
 
   var PRIMARY_APPS = [
@@ -569,6 +571,22 @@
     if (!tile || S.lightStatus === 'sending') return;
     S.lightStatus = 'sending'; render();
     HouseAPI.fireAction(tile.id, null, function (err, resultTile) {
+      if (resultTile) applyTileResult(resultTile);
+      S.lightStatus = err ? 'failed' : 'done';
+      render();
+      setTimeout(function () { S.lightStatus = ''; render(); }, 2000);
+    });
+  }
+  /* The remote's Red/Green/Yellow/Blue buttons, registered in FrameDevice.registerColorKeys -
+     a quick colour shortcut from Home, independent of the long-press popup (which stays
+     adjust-then-explicit-OK; this is a single complete action, same as the short-press toggle
+     already is, so it sends immediately rather than accumulating like the popup's zones do). */
+  function lightColorShortcut(swatchIndex) {
+    var tile = quickTile();
+    if (!tile || !tile.color_mode || S.lightStatus === 'sending') return;
+    S.lightStatus = 'sending'; render();
+    var body = { state: 'on', brightness: tile.brightness == null ? 100 : tile.brightness, color_mode: 'color', rgb: hexToRgb(LIGHT_SWATCHES[swatchIndex]) };
+    HouseAPI.fireAction(tile.id, body, function (err, resultTile) {
       if (resultTile) applyTileResult(resultTile);
       S.lightStatus = err ? 'failed' : 'done';
       render();
@@ -2198,6 +2216,7 @@
       longPressTimer = setTimeout(function () { longPressTimer = null; longPressArmed = false; openLight(); render(); }, LIGHT_LONGPRESS_MS);
       return;
     }
+    if (k in COLOR_KEY_SWATCH && top().id === 'home') { lightColorShortcut(COLOR_KEY_SWATCH[k]); return; }
     press(k);
   });
   document.addEventListener('keyup', function (ev) {
@@ -2248,6 +2267,7 @@
 
   /* ---------- Start ---------- */
   cueL.innerHTML = icon('left'); cueR.innerHTML = icon('right');
+  if (window.FrameDevice && FrameDevice.registerColorKeys) FrameDevice.registerColorKeys();
   initialise();
   setLook({}, { transient: true, startup: true });
   norm(); render(); fit(); focusStage(); updateClock(); syncRotation();

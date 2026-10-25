@@ -220,12 +220,24 @@ spec. If that policy gets decided later, house-api can just send whatever
 the UI renders event titles as plain text regardless of their source, so
 no client-side redaction awareness is needed either way.
 
-## Dropped: remote colour-key (F1-F4) mapping
+## Remote colour-key (Red/Green/Yellow/Blue) shortcut
 
-The house-api-ui brief's Phase 1 item 6 ("map the colour keys to F1-F4 in
-the preview, matching the TV's ColorF0Red..ColorF3Blue handling") didn't
-correspond to anything in the codebase - no existing remote-color-key
-handling in `app/device.js` or `app/main.js`, no `tizen:privilege` for it
-in `config.xml`, and no feature in this house-api UI plan that would use
-a remote's colour buttons. Raised at the end of Phase 1; confirmed out of
-scope and dropped entirely, not implemented.
+Originally raised in the house-api-ui brief's Phase 1 and dropped as out
+of scope - no feature used the remote's colour buttons yet. Implemented
+later once the Lights control existed to use them: from Home (not inside
+the long-press popup), Red/Green/Yellow/Blue set the quick-access light
+tile directly to one of the swatch presets (`LIGHT_SWATCHES` indices 0/4/
+3/6 - the closest hue to each button's own colour) and commit immediately,
+same `state:'on'`/`color_mode:'color'`/`rgb` body shape as any other
+colour commit, preserving the tile's current `brightness`. A tile with no
+`color_mode` at all (no colour capability) makes these a no-op, same as
+the popup's own guard.
+
+`FrameDevice.registerColorKeys()` (`app/device.js`) calls
+`tizen.tvinputdevice.registerKey('ColorF0Red' | 'ColorF1Green' |
+'ColorF2Yellow' | 'ColorF3Blue')` once at startup - undocumented in this
+repo until now, but these are Tizen's standard registerable key names,
+delivered as keyCodes 403/404/405/406 (`KEYS` in `app/main.js`). Not
+verified on the real TV yet - register against the actual `tv.inputdevice`
+privilege grant and confirm the physical buttons actually deliver these
+codes.

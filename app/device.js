@@ -67,5 +67,14 @@
       }, function (err) { finish(failure(err)); });
     } catch (err) { finish(failure(err)); }
   }
-  window.FrameDevice = { launch: launch, launchApp: launchApp, art: art, home: home, settings: settings, apps: apps };
+  /* The remote's four colour buttons are inert by default - Tizen only delivers their keydown
+     events once each is explicitly registered. Best-effort: older firmware or a TV without this
+     privilege granted just leaves the buttons doing nothing, same as today. */
+  function registerColorKeys() {
+    if (!(window.tizen && tizen.tvinputdevice && tizen.tvinputdevice.registerKey)) return;
+    ['ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue'].forEach(function (name) {
+      try { tizen.tvinputdevice.registerKey(name); } catch (err) { /* unsupported here - no worse than unregistered */ }
+    });
+  }
+  window.FrameDevice = { launch: launch, launchApp: launchApp, art: art, home: home, settings: settings, apps: apps, registerColorKeys: registerColorKeys };
 }());
