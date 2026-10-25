@@ -96,6 +96,14 @@
         "icon": "lock",
         "kind": "toggle",
         "state": "on"
+      },
+      {
+        "id": "movie-time-lights",
+        "label": "Movie time lights",
+        "icon": "bulb",
+        "kind": "toggle",
+        "state": "on",
+        "settings": true
       }
     ]
   }

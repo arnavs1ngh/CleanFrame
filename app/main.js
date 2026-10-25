@@ -92,7 +92,7 @@
     sel: null, selIdx: 0, lastUtil: 0, appsFocus: null, settingsFocus: 'background', appearanceFocus: 'bg', detailFocus: {},
     undo: [], removedAt: {}, note: null, err: null,
     writes: 0, failed: 0, log: [], logN: 0, lastLaunch: null, press: null,
-    lightStatus: '', house: null,
+    lightStatus: '', automationStatus: '', house: null,
     wallShown: null, wallPending: null, wallError: null,
     shown: null, pending: null, lookError: null, bundleKey: null, previewBundle: null, reflow: false, fontSwitch: false
   };
@@ -513,6 +513,12 @@
     for (var i = 0; i < tiles.data.length; i++) if (tiles.data[i].quick) return tiles.data[i];
     return null;
   }
+  function automationTile() {
+    var tiles = S.house && S.house.home && S.house.home.tiles;
+    if (!tiles || tiles.status !== 'ok' || !tiles.data) return null;
+    for (var i = 0; i < tiles.data.length; i++) if (tiles.data[i].settings) return tiles.data[i];
+    return null;
+  }
   function applyTileResult(result) {
     var tiles = S.house && S.house.home && S.house.home.tiles && S.house.home.tiles.data, i;
     if (!tiles || !result) return;
@@ -539,6 +545,17 @@
       S.lightStatus = err ? 'failed' : 'done';
       render();
       setTimeout(function () { S.lightStatus = ''; render(); }, 2000);
+    });
+  }
+  function automationToggle() {
+    var tile = automationTile();
+    if (!tile || S.automationStatus === 'sending') return;
+    S.automationStatus = 'sending'; render();
+    HouseAPI.fireAction(tile.id, null, function (err, resultTile) {
+      if (resultTile) applyTileResult(resultTile);
+      S.automationStatus = err ? 'failed' : '';
+      render();
+      if (err) setTimeout(function () { S.automationStatus = ''; render(); }, 2000);
     });
   }
   /* Long press (see the keydown handler near the bottom) additionally opens this - it never
@@ -867,11 +884,12 @@
   /* ---------- Settings, Layout and messages ---------- */
   function mode() { for (var i = 0; i < MODES.length; i++) if (MODES[i].id === S.c.mode) return MODES[i]; return MODES[0]; }
   function settingsRows() {
-    var n = S.c.home.length, rows = [{ id: 'background', label: 'Background', value: S.c.bg === 'photo' ? wall(S.c.wall).name : VALUE_NAMES[S.c.bg] },
+    var n = S.c.home.length, autoTile = automationTile(), rows = [{ id: 'background', label: 'Background', value: S.c.bg === 'photo' ? wall(S.c.wall).name : VALUE_NAMES[S.c.bg] },
       { id: 'layout', label: 'Layout', value: VALUE_NAMES[S.c.layout] },
       { id: 'typography', label: 'Typography', value: FONTS[S.c.font].name },
       { id: 'focus', label: 'Focus', value: VALUE_NAMES[S.c.focus] + (materialApplies() ? ', ' + VALUE_NAMES[S.c.material] : '') },
       { id: 'editor', label: 'Apps on Home', value: n + (n === 1 ? ' app' : ' apps') }];
+    if (autoTile) rows.push({ id: 'automation', label: autoTile.label, value: S.automationStatus === 'sending' ? 'Sending…' : S.automationStatus === 'failed' ? 'Couldn’t reach house-api.' : (autoTile.state === 'on' ? 'On' : 'Off') });
     rows.push({ id: 'samsung', label: 'Samsung', value: 'Home and TV settings' });
     return rows;
   }
@@ -891,6 +909,7 @@
   };
   function settingsOk(id) {
     if (id === 'editor') openEditor('settings');
+    else if (id === 'automation') automationToggle();
     else openAppearance(id);
   }
   var DETAIL_NAMES = { background: 'Background', layout: 'Layout', typography: 'Typography', focus: 'Focus', rotation: 'Rotation', samsung: 'Samsung' };

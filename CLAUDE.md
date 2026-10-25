@@ -103,9 +103,23 @@ entries. Everything now goes through house-api's `tiles` data; see
   the popup. Back cancels and closes without sending anything - same
   apply-on-OK/cancel-on-Back pairing Settings already uses.
 - `scripts/check-browser.mjs`'s `page()` has a `houseApi` option (a tile
-  object) that mocks `house-api-config.js` + `/v1/home` + `/v1/actions/*`
-  at the Playwright route level - see the "Lights control" test section
-  for the pattern (`current.__houseApi.actionCalls` records every call).
+  object, or an array of tiles) that mocks `house-api-config.js` +
+  `/v1/home` + `/v1/actions/*` at the Playwright route level - see the
+  "Lights control" test section for the pattern (`current.__houseApi.
+  actionCalls` records every call, matched to the right tile by id).
+
+## Automation settings row
+
+A second, independent tile slot: whichever tile has `settings: true` (see
+`docs/api-needs.md`) shows as a plain on/off row under Settings, between
+"Apps on Home" and "Samsung" (`settingsRows()`/`automationTile()` in
+`app/main.js`). Replaces the old hardcoded "Jellyfin light sync" webhook
+toggle - the row's name and on/off value both come from the tile now, so
+it actually reflects whether the automation is on, instead of firing
+blind. OK toggles it in place (`automationToggle()`, same
+`POST /v1/actions/{id}` with no body as the Lights control's short
+press) and stays on the Settings list - no separate panel, since it's
+just one boolean.
 
 ## Never package dev code
 

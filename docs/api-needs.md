@@ -53,6 +53,24 @@ Compute: house-api. It (or whoever configures it) decides which single
 device deserves one-press access from Home; the TV just renders whichever
 tile has the flag.
 
+### `tiles.data[].settings` (boolean, optional)
+
+Example: `{ "id": "movie-time-lights", "label": "Movie time lights", "icon": "bulb", "kind": "toggle", "state": "on", "settings": true }`
+
+Why: same idea as `quick`, for a second slot - a single on/off automation
+shown as a row under Settings (replaces the old hardcoded "Jellyfin light
+sync" webhook toggle, which fired blind with no idea whether the
+automation was actually on). The label shown is the tile's own `label`,
+not a hardcoded string - name it to match the automation as it's actually
+named in house-api/Home Assistant. Set on at most one tile for now (the
+UI only renders one settings-housed automation row); pressing OK toggles
+it immediately and the row's value updates from the real `state` the
+server returns, same `POST /v1/actions/{id}` with no body as any other
+toggle - no separate endpoint or panel needed.
+
+Compute: house-api. The TV just renders whichever tile has the flag,
+exactly like `quick`.
+
 ### `tiles.data[].brightness` (number 0-100, optional)
 
 Example: `{ "brightness": 72 }`

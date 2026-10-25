@@ -95,23 +95,27 @@ async function page(options = {}) {
   const expected = ['ha-config.js', 'house-api-config.js'];
   let houseApiState = null;
   if (options.houseApi) {
-    houseApiState = { tile: { ...options.houseApi }, actionCalls: [] };
+    const initialTiles = Array.isArray(options.houseApi) ? options.houseApi : [options.houseApi];
+    houseApiState = { tiles: initialTiles.map(t => ({ ...t })), actionCalls: [] };
     await current.route('**/house-api-config.js', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: "var HOUSE_API_BASE = '/qa-house-api';" }));
     await current.route('**/qa-house-api/v1/home', route => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({ meta: { version: 1, generated_at: new Date().toISOString(), refresh_after_s: 3600 },
         weather: { status: 'error', stale: false, data: null }, calendar: { status: 'error', stale: false, data: null },
-        tiles: { status: 'ok', stale: false, data: [houseApiState.tile] } })
+        tiles: { status: 'ok', stale: false, data: houseApiState.tiles } })
     }));
     await current.route('**/qa-house-api/v1/actions/**', async route => {
       const raw = route.request().postData();
       const body = raw ? JSON.parse(raw) : {};
+      const id = decodeURIComponent(route.request().url().split('/actions/')[1]);
+      const i = houseApiState.tiles.findIndex(t => t.id === id);
       houseApiState.actionCalls.push({ url: route.request().url(), body });
       await new Promise(r => setTimeout(r, 150)); // slow enough that a test can observe "sending" and a repeat press in flight
-      if (body.fail) { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, tile: houseApiState.tile }) }); return; }
-      if ('brightness' in body || 'color_mode' in body) houseApiState.tile = { ...houseApiState.tile, ...body };
-      else houseApiState.tile = { ...houseApiState.tile, state: houseApiState.tile.state === 'on' ? 'off' : 'on' };
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, tile: houseApiState.tile }) });
+      if (i < 0) { await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'Unknown tile: ' + id }) }); return; }
+      if (body.fail) { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, tile: houseApiState.tiles[i] }) }); return; }
+      if ('brightness' in body || 'color_mode' in body) houseApiState.tiles[i] = { ...houseApiState.tiles[i], ...body };
+      else houseApiState.tiles[i] = { ...houseApiState.tiles[i], state: houseApiState.tiles[i].state === 'on' ? 'off' : 'on' };
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, tile: houseApiState.tiles[i] }) });
     });
   } else {
     // house-api-config.js: same determinism concern as ha-config.js, plus preview.py serves a
@@ -940,6 +944,25 @@ try {
     const committed = current.__houseApi.actionCalls.at(-1);
     check('OK sends the adjustment and closes the popup in one step',
       current.__houseApi.actionCalls.length === 3 && committed.body.brightness === 70 && (await call('where')).view === 'home', current.__houseApi.actionCalls);
+  });
+  await run('Automation settings row', async () => {
+    const QA_AUTO = { id: 'movie-time-lights', label: 'Movie time lights', icon: 'bulb', kind: 'toggle', state: 'off', settings: true };
+    await page(); // unconfigured
+    await scene('settings');
+    const noConfigRows = await current.locator('.settings-group-name').allTextContents();
+    check('Automation row is absent without configuration', !noConfigRows.includes('Movie time lights'), noConfigRows);
+    await closePage();
+
+    await page({ houseApi: QA_AUTO });
+    await scene('settings');
+    const rowNames = await current.locator('.settings-group-name').allTextContents();
+    check('Automation row shows its real name from the tile, not a hardcoded one', rowNames.includes('Movie time lights'), rowNames);
+    const valueFor = name => current.locator('.settings-group').filter({ hasText: name }).locator('.settings-group-value').textContent();
+    check('Row shows the live current state (Off), not a blind toggle', await valueFor('Movie time lights') === 'Off');
+    await act('settings.group.automation');
+    await current.waitForFunction(() => [...document.querySelectorAll('.settings-group-value')].some(e => e.textContent.trim() === 'On'), null, { timeout: 3000 });
+    check('Pressing OK toggles it and the row reflects the new state', true);
+    check('Toggling stays on the Settings list - no navigation away for a plain on/off', (await call('where')).view === 'settings');
   });
   section = 'Run integrity';
   report.sourceAfter = hashes();

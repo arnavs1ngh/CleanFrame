@@ -221,6 +221,14 @@
         "icon": "scene",
         "kind": "scene",
         "state": null
+      },
+      {
+        "id": "movie-time-lights",
+        "label": "Movie time lights",
+        "icon": "bulb",
+        "kind": "toggle",
+        "state": "on",
+        "settings": true
       }
     ]
   }
