@@ -57,7 +57,11 @@
   var SVG = {
     art: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.8" r="1.5"/><path d="m4.5 17.5 4.5-4.5 3 3 2.5-2.5 5 5"/>',
     bulb: '<path d="M12 3.5a6.5 6.5 0 0 0-3.8 11.8c.7.5 1.3 1.3 1.3 2.3v.4h5v-.4c0-1 .6-1.8 1.3-2.3A6.5 6.5 0 0 0 12 3.5Z"/><path d="M9.8 20.3h4.4M10.3 22h3.4"/>',
-    scene: '<path d="M12 3v5M12 16v5M3 12h5M16 12h5"/><circle cx="12" cy="12" r="2.4"/>',
+    // Material Symbols "fireplace" (filled), supplied directly - its native 960-unit coordinate
+    // space is rescaled/translated into this file's 0-24 viewBox via the path's own transform,
+    // and it's filled rather than stroked (style= beats the shared .ico{fill:none} rule), unlike
+    // every other icon here - same filled-not-stroked treatment the checkmark badge() already uses.
+    scene: '<path transform="scale(.025) translate(0,960)" style="fill:currentColor;stroke:none" d="M424-282q13 11 27.5 15.5T480-262q29 0 52.5-18.5T560-334q5-47-29-69.5T480-462q-5 14-5 26t3 26q3 17 7 32t1 32q-5 18-22 37t-40 27ZM80-80v-800h800v800H80Zm400-160q50 0 85-35t35-85q0-24-10-40t-28-30q-38-27-63.5-56.5T458-546q-44 35-71 79.5T360-362q0 35 36 78.5t84 43.5Zm-320 80h80v-80h90q-23-29-36.5-61T280-362q0-46 10-86.5t36.5-78.5q26.5-38 73.5-75.5T520-680q-11 44 9.5 93.5T606-496q33 24 53.5 56.5T680-360q0 35-11 64.5T640-240h80v80h80v-640H160v640Zm320-80Z"/>',
     apps: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>',
     arrange: '<path d="M4 8.5h14M15 5.5l3 3-3 3M20 15.5H6M9 12.5l-3 3 3 3"/>',
     settings: '<path d="m9 3-.6 2.4-2 1.2L4 6l-2 3.5L3.8 11v2L2 14.5 4 18l2.4-.6 2 1.2L9 21h6l.6-2.4 2-1.2 2.4.6 2-3.5-1.8-1.5v-2L22 9.5 20 6l-2.4.6-2-1.2L15 3Z"/><circle cx="12" cy="12" r="3.2"/>',

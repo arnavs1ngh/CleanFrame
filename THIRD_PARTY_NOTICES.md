@@ -19,6 +19,7 @@ The public app uses Manrope, Geist and Newsreader. A personal widget containing 
 | Simple Icons service marks | CC0; exact revisions and adaptations in `app/assets/icons/SOURCES.json` and `ADDITIONAL-SOURCES.json`. The CC0 text is retained beside the icons. |
 | Disney+, ABC and SBS marks | [Custom Brand Icons](https://github.com/elax46/custom-brand-icons), MIT. The retained licence is `app/assets/icons/CUSTOM-BRAND-ICONS-LICENSE.txt`. ABC and SBS sources were replaced during the public-source review. Exact revisions, source files and extraction/recolour notes are in `SOURCES.json`. |
 | Art, apps, settings and home outlines | Original CleanFrame drawings, covered by the project's MIT licence. |
+| Fireplace automation icon | [Material Symbols](https://fonts.google.com/icons) (Google), Apache License 2.0; retained at `app/assets/icons/MATERIAL-SYMBOLS-LICENSE.txt`. Inline in `app/main.js`'s `SVG.scene`, rescaled from its native 960-unit coordinate space into the file's shared 0-24 viewBox; rendered filled rather than stroked, unlike the original drawings above. |
 
 Brand marks identify services. Their owners retain trademark rights; this project claims no endorsement or affiliation. The older Australian TV icon archive's GPL text is retained for historical provenance only; no current icon uses that archive.
 
