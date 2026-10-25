@@ -103,7 +103,8 @@ async function page(options = {}) {
       return route.fulfill({
         status: 200, contentType: 'application/json',
         body: JSON.stringify({ meta: { version: 1, generated_at: new Date().toISOString(), refresh_after_s: 3600 },
-          weather: { status: 'error', stale: false, data: null }, calendar: { status: 'error', stale: false, data: null },
+          weather: { status: 'error', stale: false, data: null },
+          calendar: options.houseApiCalendar ? { status: 'ok', stale: false, data: { days: options.houseApiCalendar } } : { status: 'error', stale: false, data: null },
           tiles: { status: 'ok', stale: false, data: houseApiState.tiles } })
       });
     });
@@ -876,7 +877,7 @@ try {
     const focus = (await state()).focusAction; await current.keyboard.press('ArrowDown');
     check('Warm return restores remote focus', (await state()).focusAction !== focus && (await call('where')).focusCount === 1);
     const clock = await current.locator('#caption .clock').textContent();
-    check('Live 12-hour clock has no AM/PM', /^\s*\d{1,2}:\d{2}\s*$/.test(clock), clock);
+    check('Live 24-hour clock, zero-padded, no AM/PM', /^\s*\d{2}:\d{2}\s*$/.test(clock), clock);
   });
   await run('Open rotation and browser fallback', async () => {
     await page({ seed: baseline({ mode: 'open' }) }); check('Open mode advances at cold start', (await state()).wallpaper === walls[1].id);
@@ -1051,6 +1052,39 @@ try {
     await page({ houseApi: [QA_LIGHT, QA_FIRE, QA_SECOND] });
     const multiNames = await current.locator('.utils .u').allTextContents();
     check('Any number of tiles may be flagged home - both get their own icon', multiNames.includes('Fireplace') && multiNames.includes('Good morning'), multiNames);
+  });
+  await run('Home screen item toggles', async () => {
+    const QA_FIRE = { id: 'fireplace', label: 'Fireplace', icon: 'scene', kind: 'button', state: null, home: true };
+    const QA_DAYS = [{ label: 'Today', events: [{ time: '19:30', end: '21:00', all_day: false, title: 'House dinner', calendar: 'House' }] }];
+
+    await page(); // unconfigured: no house-api at all
+    await scene('settings');
+    const noConfigRows = await current.locator('.settings-group-name').allTextContents();
+    check('No Calendar or Fireplace row without house-api configured', !noConfigRows.includes('Calendar') && !noConfigRows.includes('Fireplace'), noConfigRows);
+    await closePage();
+
+    await page({ houseApi: [QA_FIRE], houseApiCalendar: QA_DAYS });
+    check('Calendar panel shows by default', await current.locator('.cal-panel').isVisible());
+    const utilNames1 = await current.locator('.utils .u').allTextContents();
+    check('Fireplace icon shows by default', utilNames1.includes('Fireplace'), utilNames1);
+
+    await scene('settings');
+    const rowNames = await current.locator('.settings-group-name').allTextContents();
+    check('Calendar row present (house-api configured) and defaults to On', rowNames.includes('Calendar') && await current.locator('.settings-group').filter({ hasText: 'Calendar' }).locator('.settings-group-value').textContent() === 'On');
+    check("Fireplace row uses the tile's own label and defaults to On", rowNames.includes('Fireplace') && await current.locator('.settings-group').filter({ hasText: 'Fireplace' }).locator('.settings-group-value').textContent() === 'On');
+
+    await act('settings.group.calendar');
+    await current.waitForFunction(() => [...document.querySelectorAll('.settings-group-value')].some(e => e.textContent.trim() === 'Off'));
+    await act('settings.group.fireplace');
+    await scene('home');
+    check('Calendar panel hides once turned off', !(await current.locator('.cal-panel').isVisible()));
+    const utilNames2 = await current.locator('.utils .u').allTextContents();
+    check('Fireplace icon hides once turned off, Lights/Apps/Settings unaffected', !utilNames2.includes('Fireplace') && utilNames2.includes('Light'), utilNames2);
+
+    await scene('settings');
+    await act('settings.group.calendar'); await act('settings.group.fireplace');
+    await scene('home');
+    check('Both turn back on', await current.locator('.cal-panel').isVisible() && (await current.locator('.utils .u').allTextContents()).includes('Fireplace'));
   });
   section = 'Run integrity';
   report.sourceAfter = hashes();

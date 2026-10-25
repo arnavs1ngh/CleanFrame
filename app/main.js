@@ -368,7 +368,10 @@
       focus: pick(modern.focus, LOOK_VALUES.focus, legacyList || fresh ? 'type' : 'glass'), material: pick(modern.material, LOOK_VALUES.material, 'soft'),
       font: pick(modern.font, LOOK_VALUES.font, 'manrope'), wall: wall(modern.wall || s.wallpaper) ? modern.wall || s.wallpaper : WALLS[0].id,
       home: h, recent: recent, lastApp: h.indexOf(s.lastApp) >= 0 ? s.lastApp : h[0],
-      mode: pick(s.mode, MODES.map(function (m) { return m.id; }), 'fixed')
+      mode: pick(s.mode, MODES.map(function (m) { return m.id; }), 'fixed'),
+      // Shown by default - an existing install with no saved value keeps today's behaviour, not
+      // today's behaviour-plus-a-surprise-change. Only an explicit false turns either off.
+      showCalendar: s.showCalendar !== false, showFireplace: s.showFireplace !== false
     };
   }
   function serialise(c) {
@@ -393,7 +396,7 @@
   }
   function clearSession() { S.undo = []; S.removedAt = {}; S.note = null; S.err = null; }
   function begin() { S.note = null; }
-  function next(home, recent) { var c = lookOf(S.c); c.home = home; c.recent = recent; c.lastApp = S.c.lastApp; c.mode = S.c.mode; return c; }
+  function next(home, recent) { var c = lookOf(S.c); c.home = home; c.recent = recent; c.lastApp = S.c.lastApp; c.mode = S.c.mode; c.showCalendar = S.c.showCalendar; c.showFireplace = S.c.showFireplace; return c; }
   function snap() { return { home: S.c.home.slice(), recent: S.c.recent.slice() }; }
   function pushRecent(list, id) { return [id].concat(without(list, id)).slice(0, 5); }
   function write(c, label) {
@@ -544,7 +547,7 @@
   }
   function utils() {
     if (!(window.HouseAPI && HouseAPI.configured())) return ['apps', 'settings'];
-    var list = ['light'], tiles = homeTiles(), i;
+    var list = ['light'], tiles = S.c.showFireplace ? homeTiles() : [], i;
     for (i = 0; i < tiles.length; i++) list.push('home:' + tiles[i].id);
     list.push('apps', 'settings');
     return list;
@@ -603,6 +606,14 @@
       }
       setTimeout(function () { delete S.homeTileStatus[id]; render(); }, 2000);
     });
+  }
+  /* Local display preferences (Settings: whether the calendar panel and the home-row automation
+     icons show at all) - purely a TV-side choice, not a house-api round trip, so this persists
+     through the normal preference-write path like any other choice (see write()/next()). */
+  function toggleHomeItem(key) {
+    var c = next(S.c.home.slice(), S.c.recent.slice());
+    c[key] = !S.c[key];
+    write(c, (key === 'showCalendar' ? 'Calendar' : 'Home icons') + (c[key] ? ' on' : ' off'));
   }
   /* Long press (see the keydown handler near the bottom) additionally opens this - it never
      replaces the short-press toggle above. */
@@ -945,6 +956,12 @@
       { id: 'typography', label: 'Typography', value: FONTS[S.c.font].name },
       { id: 'focus', label: 'Focus', value: VALUE_NAMES[S.c.focus] + (materialApplies() ? ', ' + VALUE_NAMES[S.c.material] : '') },
       { id: 'editor', label: 'Apps on Home', value: n + (n === 1 ? ' app' : ' apps') }];
+    // Both are plain local display choices, not house-api state - only shown when there's
+    // actually something to hide (no point offering to turn off a calendar/icon that never
+    // shows anyway). The home-icons row names whichever tile it's hiding, not a hardcoded string.
+    if (window.HouseAPI && HouseAPI.configured()) rows.push({ id: 'calendar', label: 'Calendar', value: S.c.showCalendar ? 'On' : 'Off' });
+    var firstHome = homeTiles()[0];
+    if (firstHome) rows.push({ id: 'fireplace', label: firstHome.label, value: S.c.showFireplace ? 'On' : 'Off' });
     if (autoTile) rows.push({ id: 'automation', label: autoTile.label, value: S.automationStatus === 'sending' ? 'Sending…' : S.automationStatus === 'failed' ? 'Couldn’t reach house-api.' : (autoTile.state === 'on' ? 'On' : 'Off') });
     rows.push({ id: 'samsung', label: 'Samsung', value: 'Home and TV settings' });
     return rows;
@@ -966,6 +983,8 @@
   function settingsOk(id) {
     if (id === 'editor') openEditor('settings');
     else if (id === 'automation') automationToggle();
+    else if (id === 'calendar') toggleHomeItem('showCalendar');
+    else if (id === 'fireplace') toggleHomeItem('showFireplace');
     else openAppearance(id);
   }
   var DETAIL_NAMES = { background: 'Background', layout: 'Layout', typography: 'Typography', focus: 'Focus', rotation: 'Rotation', samsung: 'Samsung' };
@@ -1258,7 +1277,7 @@
   }
   function renderCalendar() {
     var snap = S.house, home = snap && snap.home, c = home && home.calendar, days = c && c.data && c.data.days, seenSpans = {};
-    if (!c || c.status !== 'ok' || !days || !days.length) {
+    if (!S.c.showCalendar || !c || c.status !== 'ok' || !days || !days.length) {
       calPanel.className = 'cal-panel is-hidden'; setHTML(calRows, ''); return;
     }
     calPanel.className = 'cal-panel' + (snap.stale || c.stale ? ' is-stale' : '');
@@ -1290,8 +1309,8 @@
   }
 
   function clockText() {
-    var d = new Date(), h = d.getHours() % 12 || 12, m = d.getMinutes();
-    return h + ':' + (m < 10 ? '0' : '') + m;
+    var d = new Date(), h = d.getHours(), m = d.getMinutes();
+    return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
   }
   function clockHtml() {
     var text = clockText(), metrics = fontMetrics[homeFont()];
