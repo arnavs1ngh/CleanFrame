@@ -115,7 +115,9 @@ async function page(options = {}) {
       houseApiState.actionCalls.push({ url: route.request().url(), body });
       await new Promise(r => setTimeout(r, 150)); // slow enough that a test can observe "sending" and a repeat press in flight
       if (i < 0) { await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'Unknown tile: ' + id }) }); return; }
-      if (body.fail) { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, tile: houseApiState.tiles[i] }) }); return; }
+      // body.fail covers callers that send a body (Lights' brightness/colour commit); options.houseApiFail
+      // covers a plain no-body press (a home-tile button never sends a body to fail via its own content).
+      if (body.fail || options.houseApiFail) { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, tile: houseApiState.tiles[i] }) }); return; }
       if ('brightness' in body || 'color_mode' in body) houseApiState.tiles[i] = { ...houseApiState.tiles[i], ...body };
       else houseApiState.tiles[i] = { ...houseApiState.tiles[i], state: houseApiState.tiles[i].state === 'on' ? 'off' : 'on' };
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, tile: houseApiState.tiles[i] }) });
@@ -1010,6 +1012,45 @@ try {
     await current.waitForFunction(() => [...document.querySelectorAll('.settings-group-value')].some(e => e.textContent.trim() === 'On'), null, { timeout: 3000 });
     check('Pressing OK toggles it and the row reflects the new state', true);
     check('Toggling stays on the Settings list - no navigation away for a plain on/off', (await call('where')).view === 'settings');
+  });
+  await run('Home-row automation tiles', async () => {
+    const QA_FIRE = { id: 'fireplace', label: 'Fireplace', icon: 'scene', kind: 'button', state: null, home: true };
+    const QA_LIGHT = { id: 'qa-light', label: 'Living room', icon: 'bulb', kind: 'toggle', state: 'on', quick: true, brightness: 60, color_mode: 'white', color_temp_k: 4000, rgb: { r: 255, g: 255, b: 255 } };
+    const QA_SECOND = { id: 'good-morning', label: 'Good morning', icon: 'scene', kind: 'scene', state: null, home: true };
+
+    await page({ houseApi: QA_LIGHT }); // configured, but no tile flagged home - no extra icon
+    const noHomeUtils = await current.locator('.utils .u').allTextContents();
+    check('No icon when no tile is flagged home, even though house-api is configured', !noHomeUtils.some(t => /Fireplace/.test(t)), noHomeUtils);
+    await closePage();
+
+    await page({ houseApi: [QA_LIGHT, QA_FIRE] });
+    await nav('up');
+    check('Light is still focused first', (await call('where')).focus === 'Light');
+    await nav('right');
+    check("Home-tile icon shows the tile's own label, not a hard-coded one", (await call('where')).focus === 'Fireplace');
+    const fireClass = await current.locator('.utils .u').nth(1).getAttribute('class');
+    check('Never shows on/off state - a home tile is always a one-shot press', !/is-on/.test(fireClass), fireClass);
+
+    await act('util.home:fireplace');
+    check('Pressing it sends the action with no body', Object.keys(current.__houseApi.actionCalls[0].body).length === 0, current.__houseApi.actionCalls[0]);
+    await act('util.home:fireplace'); // repeat press while in flight
+    await current.waitForFunction(() => /is-busy/.test(document.querySelectorAll('.utils .u')[1].className));
+    check('Repeat press while in flight is ignored', current.__houseApi.actionCalls.length === 1, current.__houseApi.actionCalls);
+    await current.waitForFunction(() => !/is-busy/.test(document.querySelectorAll('.utils .u')[1].className));
+    await act('util.home:fireplace'); // pressed again right after a successful send
+    check('A second press during the post-success cooldown is also ignored', current.__houseApi.actionCalls.length === 1, current.__houseApi.actionCalls);
+    await closePage();
+
+    await page({ houseApi: [QA_LIGHT, QA_FIRE], houseApiFail: true });
+    await nav('up'); await nav('right');
+    await act('util.home:fireplace');
+    await current.waitForFunction(() => /is-failed/.test(document.querySelectorAll('.utils .u')[1].className), null, { timeout: 2000 });
+    check('ok:false shows the same failure indicator the Lights control uses', true);
+    await closePage();
+
+    await page({ houseApi: [QA_LIGHT, QA_FIRE, QA_SECOND] });
+    const multiNames = await current.locator('.utils .u').allTextContents();
+    check('Any number of tiles may be flagged home - both get their own icon', multiNames.includes('Fireplace') && multiNames.includes('Good morning'), multiNames);
   });
   section = 'Run integrity';
   report.sourceAfter = hashes();

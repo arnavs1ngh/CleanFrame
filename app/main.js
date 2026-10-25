@@ -53,9 +53,11 @@
   };
   var LIGHT_SWATCHES = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#6366f1', '#a855f7', '#ec4899'];
   var LIGHT_TEMP_MIN = 2200, LIGHT_TEMP_MAX = 6500, LIGHT_TEMP_STEP = 200, LIGHT_BRIGHT_STEP = 5, LIGHT_LONGPRESS_MS = 500;
+  var HOME_TILE_COOLDOWN_MS = 15000;
   var SVG = {
     art: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.8" r="1.5"/><path d="m4.5 17.5 4.5-4.5 3 3 2.5-2.5 5 5"/>',
     bulb: '<path d="M12 3.5a6.5 6.5 0 0 0-3.8 11.8c.7.5 1.3 1.3 1.3 2.3v.4h5v-.4c0-1 .6-1.8 1.3-2.3A6.5 6.5 0 0 0 12 3.5Z"/><path d="M9.8 20.3h4.4M10.3 22h3.4"/>',
+    scene: '<path d="M12 3v5M12 16v5M3 12h5M16 12h5"/><circle cx="12" cy="12" r="2.4"/>',
     apps: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>',
     arrange: '<path d="M4 8.5h14M15 5.5l3 3-3 3M20 15.5H6M9 12.5l-3 3 3 3"/>',
     settings: '<path d="m9 3-.6 2.4-2 1.2L4 6l-2 3.5L3.8 11v2L2 14.5 4 18l2.4-.6 2 1.2L9 21h6l.6-2.4 2-1.2 2.4.6 2-3.5-1.8-1.5v-2L22 9.5 20 6l-2.4.6-2-1.2L15 3Z"/><circle cx="12" cy="12" r="3.2"/>',
@@ -92,7 +94,7 @@
     sel: null, selIdx: 0, lastUtil: 0, appsFocus: null, settingsFocus: 'background', appearanceFocus: 'bg', detailFocus: {},
     undo: [], removedAt: {}, note: null, err: null,
     writes: 0, failed: 0, log: [], logN: 0, lastLaunch: null, press: null,
-    lightStatus: '', automationStatus: '', house: null,
+    lightStatus: '', automationStatus: '', homeTileStatus: {}, homeTileCooldown: {}, house: null,
     wallShown: null, wallPending: null, wallError: null,
     shown: null, pending: null, lookError: null, bundleKey: null, previewBundle: null, reflow: false, fontSwitch: false
   };
@@ -519,12 +521,30 @@
     for (var i = 0; i < tiles.data.length; i++) if (tiles.data[i].settings) return tiles.data[i];
     return null;
   }
+  /* Unlike quick/settings, any number of tiles may be flagged - one icon per tile, on Home. */
+  function homeTiles() {
+    var tiles = S.house && S.house.home && S.house.home.tiles, out = [], i;
+    if (!tiles || tiles.status !== 'ok' || !tiles.data) return out;
+    for (i = 0; i < tiles.data.length; i++) if (tiles.data[i].home) out.push(tiles.data[i]);
+    return out;
+  }
+  function homeTileTile(u) {
+    var id = u.slice(5), tiles = homeTiles(), i;
+    for (i = 0; i < tiles.length; i++) if (tiles[i].id === id) return tiles[i];
+    return null;
+  }
   function applyTileResult(result) {
     var tiles = S.house && S.house.home && S.house.home.tiles && S.house.home.tiles.data, i;
     if (!tiles || !result) return;
     for (i = 0; i < tiles.length; i++) if (tiles[i].id === result.id) tiles[i] = result;
   }
-  function utils() { return window.HouseAPI && HouseAPI.configured() ? ['light', 'apps', 'settings'] : ['apps', 'settings']; }
+  function utils() {
+    if (!(window.HouseAPI && HouseAPI.configured())) return ['apps', 'settings'];
+    var list = ['light'], tiles = homeTiles(), i;
+    for (i = 0; i < tiles.length; i++) list.push('home:' + tiles[i].id);
+    list.push('apps', 'settings');
+    return list;
+  }
   /* prev/next run along the apps; out goes to the controls, inn comes back (or to a per-app action). */
   function axes() {
     var v = S.c.layout === 'list';
@@ -534,6 +554,7 @@
     if (u === 'art') perform('Art Mode', FrameDevice.art);
     else if (u === 'apps') openApps();
     else if (u === 'light') lightToggle();
+    else if (u.indexOf('home:') === 0) homeTilePress(u.slice(5));
     else openSettings();
   }
   function lightToggle() {
@@ -556,6 +577,27 @@
       S.automationStatus = err ? 'failed' : '';
       render();
       if (err) setTimeout(function () { S.automationStatus = ''; render(); }, 2000);
+    });
+  }
+  /* A one-shot automation press (e.g. Fireplace) - no popup, no on/off state. ok:true only means
+     the server accepted it, not that whatever it triggers has actually happened yet (house-api
+     itself may go on to do things - like starting a video - that CleanFrame has no way to track),
+     so this gives the same brief "done" confirmation the other controls use and stops there,
+     rather than waiting on or assuming anything further. The cooldown (separate from the in-flight
+     guard, which only covers the request itself) stops a second press soon after a successful one
+     from re-running the automation while its effects are still landing. */
+  function homeTilePress(id) {
+    if (S.homeTileStatus[id] === 'sending' || S.homeTileCooldown[id]) return;
+    S.homeTileStatus[id] = 'sending'; render();
+    HouseAPI.fireAction(id, null, function (err, resultTile) {
+      if (resultTile) applyTileResult(resultTile);
+      S.homeTileStatus[id] = err ? 'failed' : 'done';
+      render();
+      if (!err) {
+        S.homeTileCooldown[id] = true;
+        setTimeout(function () { delete S.homeTileCooldown[id]; }, HOME_TILE_COOLDOWN_MS);
+      }
+      setTimeout(function () { delete S.homeTileStatus[id]; render(); }, 2000);
     });
   }
   /* Long press (see the keydown handler near the bottom) additionally opens this - it never
@@ -1283,12 +1325,23 @@
     var iconsOnly = style === 'icons', U = utils(), focused = null;
     utilsEl.className = 'utils quiet-utils is-' + style + (hs.zone === 'util' || hs.zone === 'ctl' ? ' is-awake' : '');
     U.forEach(function (u, i) {
-      // The label stays static ("Light", not the tile name or Sending/Done) - a changing
-      // label was shifting the button's own width, which read as the whole row jittering.
-      var label = UTIL[u][0];
-      var tile = u === 'light' ? quickTile() : null;
-      var extra = u === 'light' ? ((tile && tile.state === 'on') ? ' is-on' : '') + (S.lightStatus === 'sending' ? ' is-busy' : '') + (S.lightStatus === 'failed' ? ' is-failed' : '') : '';
-      html += utilBtn('util', i, 'util.' + u, icon(UTIL[u][1], '', true) + '<span class="u-label">' + esc(label) + '</span>', extra, label);
+      var isHomeTile = u.indexOf('home:') === 0, label, iconName, tile, extra;
+      if (isHomeTile) {
+        // One-shot automation (e.g. Fireplace): label is the tile's own name, not hard-coded -
+        // it doesn't change with status, so unlike Light's label this can't jitter the row.
+        // No on/off state ever (a home tile is always a one-shot press, never a toggle).
+        tile = homeTileTile(u);
+        label = tile ? tile.label : '';
+        iconName = tile ? tile.icon : 'scene';
+        extra = (S.homeTileStatus[tile && tile.id] === 'sending' ? ' is-busy' : '') + (S.homeTileStatus[tile && tile.id] === 'failed' ? ' is-failed' : '');
+      } else {
+        // The label stays static ("Light", not the tile name or Sending/Done) - a changing
+        // label was shifting the button's own width, which read as the whole row jittering.
+        label = UTIL[u][0]; iconName = UTIL[u][1];
+        tile = u === 'light' ? quickTile() : null;
+        extra = u === 'light' ? ((tile && tile.state === 'on') ? ' is-on' : '') + (S.lightStatus === 'sending' ? ' is-busy' : '') + (S.lightStatus === 'failed' ? ' is-failed' : '') : '';
+      }
+      html += utilBtn('util', i, 'util.' + u, icon(iconName, '', true) + '<span class="u-label">' + esc(label) + '</span>', extra, label);
     });
     setHTML(utilsEl, html);
     Array.prototype.forEach.call(utilsEl.querySelectorAll('.u'), function (b) {
