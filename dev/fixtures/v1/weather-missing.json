@@ -71,7 +71,11 @@
           "g": 255,
           "b": 255
         },
-        "color_temp_k": 4000
+        "color_temp_k": 4000,
+        "color_temp_range": {
+          "min": 1801,
+          "max": 6535
+        }
       },
       {
         "id": "front-door",
@@ -83,7 +87,7 @@
       {
         "id": "movie-time-lights",
         "label": "Movie time lights",
-        "icon": "bulb",
+        "icon": "tv",
         "kind": "toggle",
         "state": "off",
         "settings": true

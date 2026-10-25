@@ -109,13 +109,38 @@ Compute: house-api, mirroring the light's actual last-set colour.
 
 Example: `{ "color_temp_k": 4000 }`
 
-Why: positions the warm↔cool slider in White mode. The UI assumes a
-2200-6500K range (common for consumer bulbs) with no explicit bounds field
-from the server yet - if real bulbs need a narrower/wider range, house-api
-should also send `tiles.data[].color_temp_range: {min, max}`, not
-implemented here since the fixtures didn't need it.
+Why: positions the warm↔cool slider in White mode.
 
 Compute: house-api, mirroring the light's actual colour temperature.
+
+### `tiles.data[].color_temp_range` (`{min, max}`, Kelvin, optional)
+
+Example: `{ "color_temp_range": { "min": 1801, "max": 6535 } }`
+
+Why: real bulbs vary - the living room bulb is 1801-6535K, not the
+2200-6500K this UI originally assumed as a generic default. The slider's
+bounds and the value sent back both need to match the specific tile's
+actual range, or an adjustment could ask for a colour temperature the
+bulb can't produce. Absent on a tile, the UI falls back to its generic
+2200-6500K default.
+
+Compute: house-api, from whatever the light reports as its own capability.
+
+### Two behaviours worth stating explicitly (no new fields, just confirming)
+
+- An off light still reports its last brightness/colour in its tile, never
+  `brightness: 0` or a cleared `rgb`/`color_temp_k` - the popup needs real
+  values to show even when the light is off, so a press-to-adjust doesn't
+  start from a meaningless zero.
+- An entity Home Assistant can't currently see (unavailable, automation
+  missing, etc.) is simply omitted from `tiles.data` rather than included
+  with some "unavailable" state. The UI's two reactions to an omitted tile
+  differ and both are intentional, not a bug: a missing `settings` tile
+  hides that Settings row entirely; a missing `quick` tile leaves the
+  Home-row Light control visible (since it's gated on house-api being
+  configured at all, not on a specific tile existing) but inert - pressing
+  it does nothing, since `quickTile()` returns null. No new state value is
+  needed for either case.
 
 ### `POST /v1/actions/{id}` now takes an optional JSON body
 

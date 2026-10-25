@@ -80,7 +80,11 @@
           "g": 197,
           "b": 94
         },
-        "color_temp_k": 3000
+        "color_temp_k": 3000,
+        "color_temp_range": {
+          "min": 1801,
+          "max": 6535
+        }
       },
       {
         "id": "kitchen-lights",
@@ -225,7 +229,7 @@
       {
         "id": "movie-time-lights",
         "label": "Movie time lights",
-        "icon": "bulb",
+        "icon": "tv",
         "kind": "toggle",
         "state": "on",
         "settings": true
