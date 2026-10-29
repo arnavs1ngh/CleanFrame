@@ -1,0 +1,62 @@
+{
+  "_comment": "Candidate app IDs for optional debloat groups, found by grepping .local/qa/tv-applist.txt (a real applist capture from this TV, 2026-10-23) against quiet-tizen's category names. Not yet verified against a fresh snapshot, and no disable mechanism has been chosen or tested yet - see docs/debloat.md. Every entry starts 'verified: false' until it's been individually confirmed present in a fresh snapshot and (separately) safe to disable without breaking something else.",
+  "advertising": {
+    "label": "Advertising and promotion",
+    "apps": [
+      { "id": "com.samsung.tv.ad-web-framework", "name": "Ad Web Framework", "verified": false },
+      { "id": "com.samsung.tv.targeted-ad-service", "name": "Targeted Advertisment Service", "verified": false },
+      { "id": "yL49PNFmjW.service", "name": "PromotionService", "verified": false },
+      { "id": "yL49PNFmjW.PromotionApp", "name": "Samsung Promotion", "verified": false },
+      { "id": "com.samsung.tv.tvkey-preview", "name": "TVKeyRecommendDownloader", "verified": false }
+    ]
+  },
+  "voice": {
+    "label": "Bixby and voice",
+    "apps": [
+      { "id": "com.samsung.tv.bixby-prov", "name": "Bixby Provisioning", "verified": false },
+      { "id": "com.samsung.tv.bixby-context-client", "name": "Bixby Context Client", "verified": false },
+      { "id": "com.samsung.tv.bixbycapsuleviewer", "name": "bixbycapsuleviewer", "verified": false },
+      { "id": "com.samsung.tv.mybixby", "name": "VoiceDiscoveryMenu", "verified": false },
+      { "id": "com.samsung.tv.wakeup-engine-bixby", "name": "com.samsung.tv.wakeup-engine-bixby", "verified": false },
+      { "id": "com.samsung.tv.salute-assistant", "name": "Salute Assistant", "verified": false },
+      { "id": "com.samsung.tv.salute-fullscreen-app", "name": "salute-fullscreen-app", "verified": false },
+      { "id": "com.samsung.tv.voice-instant-app", "name": "voice instant application", "verified": false },
+      { "id": "com.samsung.tv.farfieldvoice", "name": "com.samsung.tv.farfieldvoice", "verified": false },
+      { "id": "com.samsung.tv.voiceassistant-music", "name": "voiceassistant-music", "verified": false },
+      { "id": "com.samsung.tv.ondevice-voice", "name": "com.samsung.tv.ondevice-voice", "verified": false },
+      { "id": "com.samsung.tv.utterance-recommender-core", "name": "utterance-recommender-core", "verified": false },
+      { "id": "com.samsung.tv.utterance-recommender-app", "name": "utterance-recommender-app", "verified": false },
+      { "id": "com.samsung.tv.vif", "name": "voice-interaction-framework", "verified": false },
+      { "id": "org.tizen.voice-app", "name": "voice application", "verified": false },
+      { "id": "org.tizen.voice-app-service", "name": "voice application", "verified": false },
+      { "id": "org.tizen.voice-client", "name": "Voice Client", "verified": false },
+      { "id": "org.tizen.voice-onboarding", "name": "voice-onboarding", "verified": false },
+      { "id": "org.tizen.tts-download-ui", "name": "neural TTS engine", "verified": false },
+      { "id": "org.tizen.tts-download-service", "name": "tts-download-service", "verified": false },
+      { "id": "org.tizen.vc-elm-unittests", "name": "Voice Control Elm unittests", "verified": false }
+    ]
+  },
+  "context": {
+    "label": "Context-aware services",
+    "apps": [
+      { "id": "com.samsung.tv.context-aware-agent", "name": "ContextAwareAgent", "verified": false },
+      { "id": "com.samsung.tv.context-aware-agent-toast-view", "name": "Context Aware Agent UI Viewer", "verified": false },
+      { "id": "com.samsung.tv.context-aware-grab-control", "name": "Context Aware Agent GrabControl", "verified": false },
+      { "id": "com.samsung.tv.context-aware-server-requester", "name": "Context Aware Serer Requester", "verified": false },
+      { "id": "com.samsung.tv.context-aware-service", "name": "ContextAwareService", "verified": false }
+    ]
+  },
+  "sidebar": {
+    "label": "Home sidebar",
+    "apps": [
+      { "id": "com.samsung.tv.home.sidebar", "name": "com.samsung.tv.home.sidebar", "verified": false }
+    ]
+  },
+  "tvplus": {
+    "label": "Samsung TV Plus",
+    "apps": [
+      { "id": "com.samsung.tv.tvPlusDeeplinker", "name": "Samsung TV Plus", "verified": false },
+      { "id": "com.samsung.tv.tvplus", "name": "tvplus", "verified": false }
+    ]
+  }
+}
