@@ -1,62 +1,102 @@
 {
-  "_comment": "Candidate app IDs for optional debloat groups, found by grepping .local/qa/tv-applist.txt (a real applist capture from this TV, 2026-10-23) against quiet-tizen's category names. Not yet verified against a fresh snapshot, and no disable mechanism has been chosen or tested yet - see docs/debloat.md. Every entry starts 'verified: false' until it's been individually confirmed present in a fresh snapshot and (separately) safe to disable without breaking something else.",
+  "_comment": "Candidate app IDs for optional debloat groups, found by grepping .local/qa/tv-applist.txt (a real applist capture from this TV, 2026-10-23) against quiet-tizen's category names. smart-extras and telemetry were added 2026-11-02 after a direct comparison against jss8649/quiet-tizen's own cleanup profile surfaced them as categories this list didn't cover yet - same grep-against-the-real-capture method as the original five. All 63 candidates confirmed present in the baseline-01 snapshot (2026-11-02, .local/debloat/snapshots/baseline-01) and marked verified:true on that basis - presence only, not yet separately confirmed safe to disable. No disable mechanism has been chosen or tested yet - see docs/debloat.md.",
   "advertising": {
     "label": "Advertising and promotion",
     "apps": [
-      { "id": "com.samsung.tv.ad-web-framework", "name": "Ad Web Framework", "verified": false },
-      { "id": "com.samsung.tv.targeted-ad-service", "name": "Targeted Advertisment Service", "verified": false },
-      { "id": "yL49PNFmjW.service", "name": "PromotionService", "verified": false },
-      { "id": "yL49PNFmjW.PromotionApp", "name": "Samsung Promotion", "verified": false },
-      { "id": "com.samsung.tv.tvkey-preview", "name": "TVKeyRecommendDownloader", "verified": false }
+      { "id": "com.samsung.tv.ad-web-framework", "name": "Ad Web Framework", "verified": true },
+      { "id": "com.samsung.tv.targeted-ad-service", "name": "Targeted Advertisment Service", "verified": true },
+      { "id": "yL49PNFmjW.service", "name": "PromotionService", "verified": true },
+      { "id": "yL49PNFmjW.PromotionApp", "name": "Samsung Promotion", "verified": true },
+      { "id": "com.samsung.tv.tvkey-preview", "name": "TVKeyRecommendDownloader", "verified": true }
     ]
   },
   "voice": {
     "label": "Bixby and voice",
     "apps": [
-      { "id": "com.samsung.tv.bixby-prov", "name": "Bixby Provisioning", "verified": false },
-      { "id": "com.samsung.tv.bixby-context-client", "name": "Bixby Context Client", "verified": false },
-      { "id": "com.samsung.tv.bixbycapsuleviewer", "name": "bixbycapsuleviewer", "verified": false },
-      { "id": "com.samsung.tv.mybixby", "name": "VoiceDiscoveryMenu", "verified": false },
-      { "id": "com.samsung.tv.wakeup-engine-bixby", "name": "com.samsung.tv.wakeup-engine-bixby", "verified": false },
-      { "id": "com.samsung.tv.salute-assistant", "name": "Salute Assistant", "verified": false },
-      { "id": "com.samsung.tv.salute-fullscreen-app", "name": "salute-fullscreen-app", "verified": false },
-      { "id": "com.samsung.tv.voice-instant-app", "name": "voice instant application", "verified": false },
-      { "id": "com.samsung.tv.farfieldvoice", "name": "com.samsung.tv.farfieldvoice", "verified": false },
-      { "id": "com.samsung.tv.voiceassistant-music", "name": "voiceassistant-music", "verified": false },
-      { "id": "com.samsung.tv.ondevice-voice", "name": "com.samsung.tv.ondevice-voice", "verified": false },
-      { "id": "com.samsung.tv.utterance-recommender-core", "name": "utterance-recommender-core", "verified": false },
-      { "id": "com.samsung.tv.utterance-recommender-app", "name": "utterance-recommender-app", "verified": false },
-      { "id": "com.samsung.tv.vif", "name": "voice-interaction-framework", "verified": false },
-      { "id": "org.tizen.voice-app", "name": "voice application", "verified": false },
-      { "id": "org.tizen.voice-app-service", "name": "voice application", "verified": false },
-      { "id": "org.tizen.voice-client", "name": "Voice Client", "verified": false },
-      { "id": "org.tizen.voice-onboarding", "name": "voice-onboarding", "verified": false },
-      { "id": "org.tizen.tts-download-ui", "name": "neural TTS engine", "verified": false },
-      { "id": "org.tizen.tts-download-service", "name": "tts-download-service", "verified": false },
-      { "id": "org.tizen.vc-elm-unittests", "name": "Voice Control Elm unittests", "verified": false }
+      { "id": "com.samsung.tv.bixby-prov", "name": "Bixby Provisioning", "verified": true },
+      { "id": "com.samsung.tv.bixby-context-client", "name": "Bixby Context Client", "verified": true },
+      { "id": "com.samsung.tv.bixbycapsuleviewer", "name": "bixbycapsuleviewer", "verified": true },
+      { "id": "com.samsung.tv.mybixby", "name": "VoiceDiscoveryMenu", "verified": true },
+      { "id": "com.samsung.tv.wakeup-engine-bixby", "name": "com.samsung.tv.wakeup-engine-bixby", "verified": true },
+      { "id": "com.samsung.tv.salute-assistant", "name": "Salute Assistant", "verified": true },
+      { "id": "com.samsung.tv.salute-fullscreen-app", "name": "salute-fullscreen-app", "verified": true },
+      { "id": "com.samsung.tv.voice-instant-app", "name": "voice instant application", "verified": true },
+      { "id": "com.samsung.tv.farfieldvoice", "name": "com.samsung.tv.farfieldvoice", "verified": true },
+      { "id": "com.samsung.tv.voiceassistant-music", "name": "voiceassistant-music", "verified": true },
+      { "id": "com.samsung.tv.ondevice-voice", "name": "com.samsung.tv.ondevice-voice", "verified": true },
+      { "id": "com.samsung.tv.utterance-recommender-core", "name": "utterance-recommender-core", "verified": true },
+      { "id": "com.samsung.tv.utterance-recommender-app", "name": "utterance-recommender-app", "verified": true },
+      { "id": "com.samsung.tv.vif", "name": "voice-interaction-framework", "verified": true },
+      { "id": "org.tizen.voice-app", "name": "voice application", "verified": true },
+      { "id": "org.tizen.voice-app-service", "name": "voice application", "verified": true },
+      { "id": "org.tizen.voice-client", "name": "Voice Client", "verified": true },
+      { "id": "org.tizen.voice-onboarding", "name": "voice-onboarding", "verified": true },
+      { "id": "org.tizen.tts-download-ui", "name": "neural TTS engine", "verified": true },
+      { "id": "org.tizen.tts-download-service", "name": "tts-download-service", "verified": true },
+      { "id": "org.tizen.vc-elm-unittests", "name": "Voice Control Elm unittests", "verified": true }
     ]
   },
   "context": {
     "label": "Context-aware services",
     "apps": [
-      { "id": "com.samsung.tv.context-aware-agent", "name": "ContextAwareAgent", "verified": false },
-      { "id": "com.samsung.tv.context-aware-agent-toast-view", "name": "Context Aware Agent UI Viewer", "verified": false },
-      { "id": "com.samsung.tv.context-aware-grab-control", "name": "Context Aware Agent GrabControl", "verified": false },
-      { "id": "com.samsung.tv.context-aware-server-requester", "name": "Context Aware Serer Requester", "verified": false },
-      { "id": "com.samsung.tv.context-aware-service", "name": "ContextAwareService", "verified": false }
+      { "id": "com.samsung.tv.context-aware-agent", "name": "ContextAwareAgent", "verified": true },
+      { "id": "com.samsung.tv.context-aware-agent-toast-view", "name": "Context Aware Agent UI Viewer", "verified": true },
+      { "id": "com.samsung.tv.context-aware-grab-control", "name": "Context Aware Agent GrabControl", "verified": true },
+      { "id": "com.samsung.tv.context-aware-server-requester", "name": "Context Aware Serer Requester", "verified": true },
+      { "id": "com.samsung.tv.context-aware-service", "name": "ContextAwareService", "verified": true }
     ]
   },
   "sidebar": {
     "label": "Home sidebar",
     "apps": [
-      { "id": "com.samsung.tv.home.sidebar", "name": "com.samsung.tv.home.sidebar", "verified": false }
+      { "id": "com.samsung.tv.home.sidebar", "name": "com.samsung.tv.home.sidebar", "verified": true }
     ]
   },
   "tvplus": {
     "label": "Samsung TV Plus",
     "apps": [
-      { "id": "com.samsung.tv.tvPlusDeeplinker", "name": "Samsung TV Plus", "verified": false },
-      { "id": "com.samsung.tv.tvplus", "name": "tvplus", "verified": false }
+      { "id": "com.samsung.tv.tvPlusDeeplinker", "name": "Samsung TV Plus", "verified": true },
+      { "id": "com.samsung.tv.tvplus", "name": "tvplus", "verified": true }
+    ]
+  },
+  "smart-extras": {
+    "label": "SmartThings, health and gaming hub",
+    "apps": [
+      { "id": "com.samsung.tv.smartthingsfind-ondemand", "name": "SmartThings-Find", "verified": true },
+      { "id": "com.samsung.tv.smartthingsfind-daemon", "name": "SmartThings-Find", "verified": true },
+      { "id": "com.samsung.tv.SmartThingsApp", "name": "SmartThings", "verified": true },
+      { "id": "com.samsung.tv.smartthings-partial-app", "name": "SmartThingsPartialApp", "verified": true },
+      { "id": "com.samsung.tizen.smartthings-plugin", "name": "plugin-launcher-service", "verified": true },
+      { "id": "com.samsung.tizen.smartthings-plugin-platform", "name": "pluginplatform", "verified": true },
+      { "id": "com.samsung.tizen.smartthings-thing", "name": "smartthings-thing", "verified": true },
+      { "id": "com.samsung.tizen.smartthings-hub", "name": "SmartThingsHub", "verified": true },
+      { "id": "com.samsung.tizen.smartthings-client", "name": "smartthings-client", "verified": true },
+      { "id": "com.samsung.tv.iotwidget-camera", "name": "SmartThingsCamera", "verified": true },
+      { "id": "com.samsung.tv.iotwidget-familycare", "name": "SmartThingsFamilyCare", "verified": true },
+      { "id": "com.samsung.tv.iotwidget-security", "name": "SmartThingsSecurity", "verified": true },
+      { "id": "com.samsung.tv.iotwidget-sleepreport", "name": "SmartThingsSleepReport", "verified": true },
+      { "id": "com.samsung.tv.iotwidget-petcare", "name": "SmartThingsPetCare", "verified": true },
+      { "id": "com.samsung.tv.samsung-health", "name": "Samsung Health", "verified": true },
+      { "id": "com.samsung.tv.coba.healthview", "name": "Samsung Health View", "verified": true },
+      { "id": "com.samsung.tv.health-mde-service", "name": "health-mde-service", "verified": true },
+      { "id": "com.samsung.tv.health-mde-service-view", "name": "health-mde-service-view", "verified": true },
+      { "id": "com.samsung.tv.health-mde-setting", "name": "HealthMdeSetting", "verified": true },
+      { "id": "com.samsung.tv.health-mde-workout-tracker", "name": "Workout Tracker", "verified": true },
+      { "id": "com.samsung.tv.gaminghub", "name": "GamingHub", "verified": true },
+      { "id": "com.samsung.tv.ambient-support", "name": "AmbientSupport", "verified": true },
+      { "id": "com.samsung.tv.ambient-sound", "name": "com.samsung.tv.ambient-sound", "verified": true },
+      { "id": "com.samsung.tv.ambientfte", "name": "AmbientFTE", "verified": true },
+      { "id": "com.samsung.tv.coba.art", "name": "AmbientComponent", "verified": true },
+      { "id": "com.samsung.tv.wizard.AmbientInfo", "name": "Wizard AITech", "verified": true }
+    ]
+  },
+  "telemetry": {
+    "label": "Telemetry and logging",
+    "_note": "quiet-tizen's own telemetry group is mostly systemd SERVICE units (ipa.service, contents-recognition-service.service, org.tizen.tv.sp-kpi.service, data-service.service), not Tizen app packages - those don't show up in applist/pkgcmd -l at all, aren't checkable by snapshot.py as it exists today, and quiet-tizen itself could only runtime-mask them (systemctl mask --runtime --now), not persist the disable across reboot. The three entries below are the app-package-level telemetry/logging candidates that actually appear in this TV's own applist capture; the service-unit layer is a separate, not-yet-built piece of tooling (see docs/debloat.md).",
+    "apps": [
+      { "id": "com.samsung.tizen.samsung-analytics", "name": "samsung-analytics", "verified": true },
+      { "id": "com.samsung.tv.contents-recognition-dbmgr", "name": "contents-recognition-dbmgr", "verified": true },
+      { "id": "org.tizen.remote-service-logging-debug-menu", "name": "Remote Service Debug Menu", "verified": true }
     ]
   }
 }
