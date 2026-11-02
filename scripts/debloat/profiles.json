@@ -7,7 +7,13 @@
       { "id": "com.samsung.tv.targeted-ad-service", "name": "Targeted Advertisment Service", "verified": true },
       { "id": "yL49PNFmjW.service", "name": "PromotionService", "verified": true },
       { "id": "yL49PNFmjW.PromotionApp", "name": "Samsung Promotion", "verified": true },
-      { "id": "com.samsung.tv.tvkey-preview", "name": "TVKeyRecommendDownloader", "verified": true }
+      { "id": "com.samsung.tv.tvkey-preview", "name": "TVKeyRecommendDownloader", "verified": true },
+      { "id": "com.samsung.tv.acr", "name": "ACRServiceApp", "verified": true },
+      { "id": "com.samsung.tv.canalysis-service", "name": "canalysis-daemon", "verified": true },
+      { "id": "com.samsung.tv.adagent-service", "name": "adagent-service", "verified": true },
+      { "id": "com.samsung.tv.coba.adagent", "name": "coba-adagent", "verified": true },
+      { "id": "com.samsung.tv.pisa-service", "name": "pisa-service", "verified": true },
+      { "id": "org.tizen.pisa-control-service", "name": "pisa-control-service", "verified": true }
     ]
   },
   "voice": {
@@ -33,7 +39,10 @@
       { "id": "org.tizen.voice-onboarding", "name": "voice-onboarding", "verified": true },
       { "id": "org.tizen.tts-download-ui", "name": "neural TTS engine", "verified": true },
       { "id": "org.tizen.tts-download-service", "name": "tts-download-service", "verified": true },
-      { "id": "org.tizen.vc-elm-unittests", "name": "Voice Control Elm unittests", "verified": true }
+      { "id": "org.tizen.vc-elm-unittests", "name": "Voice Control Elm unittests", "verified": true },
+      { "id": "com.samsung.tv.alexa-client", "name": "Alexa Client", "verified": true },
+      { "id": "com.samsung.tv.alexa-fullscreen-app", "name": "alexa-fullscreen-app", "verified": true },
+      { "id": "com.samsung.tv.wakeup-engine-alexa", "name": "com.samsung.tv.wakeup-engine-alexa", "verified": true }
     ]
   },
   "context": {
@@ -43,7 +52,8 @@
       { "id": "com.samsung.tv.context-aware-agent-toast-view", "name": "Context Aware Agent UI Viewer", "verified": true },
       { "id": "com.samsung.tv.context-aware-grab-control", "name": "Context Aware Agent GrabControl", "verified": true },
       { "id": "com.samsung.tv.context-aware-server-requester", "name": "Context Aware Serer Requester", "verified": true },
-      { "id": "com.samsung.tv.context-aware-service", "name": "ContextAwareService", "verified": true }
+      { "id": "com.samsung.tv.context-aware-service", "name": "ContextAwareService", "verified": true },
+      { "id": "content-grab-service", "name": "content-grab-service", "verified": true }
     ]
   },
   "sidebar": {
@@ -87,7 +97,13 @@
       { "id": "com.samsung.tv.ambient-sound", "name": "com.samsung.tv.ambient-sound", "verified": true },
       { "id": "com.samsung.tv.ambientfte", "name": "AmbientFTE", "verified": true },
       { "id": "com.samsung.tv.coba.art", "name": "AmbientComponent", "verified": true },
-      { "id": "com.samsung.tv.wizard.AmbientInfo", "name": "Wizard AITech", "verified": true }
+      { "id": "com.samsung.tv.wizard.AmbientInfo", "name": "Wizard AITech", "verified": true },
+      { "id": "com.samsung.tv.adplayer", "name": "AdPlayer", "verified": true },
+      { "id": "adplatform.ADPlayer", "name": "Ad Player", "verified": true },
+      { "id": "com.samsung.tv.aov-dashboard", "name": "aov-dashboard", "verified": true },
+      { "id": "com.samsung.tv.ghdaemon", "name": "GHDaemon", "verified": true },
+      { "id": "com.samsung.tv.ghservice", "name": "GHService", "verified": true },
+      { "id": "samsunghealth-service-tv", "name": "SamsungHealth-Daemon", "verified": true }
     ]
   },
   "telemetry": {
@@ -96,7 +112,18 @@
     "apps": [
       { "id": "com.samsung.tizen.samsung-analytics", "name": "samsung-analytics", "verified": true },
       { "id": "com.samsung.tv.contents-recognition-dbmgr", "name": "contents-recognition-dbmgr", "verified": true },
-      { "id": "org.tizen.remote-service-logging-debug-menu", "name": "Remote Service Debug Menu", "verified": true }
+      { "id": "org.tizen.remote-service-logging-debug-menu", "name": "Remote Service Debug Menu", "verified": true },
+      { "id": "emergency-log-transmitter", "name": "ELT QR Display", "verified": true },
+      { "id": "ep-log-manager", "name": "ep-log-manager", "verified": true }
+    ]
+  },
+  "bloatware": {
+    "label": "Retail/demo-mode tools and unsolicited popups",
+    "_note": "Not Samsung's own telemetry/ad/voice categories - found via a full-list sweep of this TV's own applist (not from quiet-tizen's list) for retail-demo and unsolicited-survey patterns. Genuinely unused outside a showroom/demo-mode setting.",
+    "apps": [
+      { "id": "com.samsung.tv.demo-player", "name": "demo-player", "verified": true },
+      { "id": "org.tizen.UsbSyncDisplay.gui", "name": "Sync Demo Gui", "verified": true },
+      { "id": "org.tizen.rm-survey", "name": "RM survey popup", "verified": true }
     ]
   }
 }

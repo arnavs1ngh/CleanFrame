@@ -4,15 +4,35 @@ Inspired by [quiet-tizen](https://github.com/jss8649/quiet-tizen)'s cleanup tool
 this TV. Separate from CleanFrame's own app and the native-Home experiment (`docs/tv-status.md`,
 `scripts/native-home/`) - this disables stock Samsung services, not anything CleanFrame installs.
 
-**Status: all 63 candidates applied and verified disabled on the TV (2026-11-02).** The mechanism
-was proven against one app first (`yL49PNFmjW.service`/PromotionService - see "What's proven"
-below), then generalised into reusable tooling (`plan.py`/`apply.py`/`restore.py`), then run for
-real against every candidate in every group - `advertising`, `voice`, `context`, `sidebar`,
-`tvplus`, `smart-extras`, `telemetry`. Zero failures; `app_onboot`/`app_autorestart` preserved
-exactly for every app, including the 12 that had `onboot` and/or `autorestart: true` to begin
-with (e.g. `com.samsung.tv.bixby-prov`, `com.samsung.tv.health-mde-service`, `com.samsung.tv.vif`
-- see `baseline.json` for the full list). The exact-value baseline for a full rollback is
-`.local/debloat/plan/20261102-185552/baseline.json` - see "Rollback" below.
+**Status: 84 candidates applied and verified disabled on the TV (2026-11-02).** The mechanism was
+proven against one app first (`yL49PNFmjW.service`/PromotionService - see "What's proven" below),
+generalised into reusable tooling (`plan.py`/`apply.py`/`restore.py`), run against the original 63
+across `advertising`/`voice`/`context`/`sidebar`/`tvplus`/`smart-extras`/`telemetry`, then extended
+twice more: 16 app IDs quiet-tizen's own profile covers that this list initially didn't (fetched
+and cross-checked against their actual `profiles/*.json`, not just their README), plus 5 more
+found by sweeping this TV's full ~500-app `applist` capture for retail-demo-mode and log-transmitter
+patterns neither list had (`bloatware` group). Zero failures across all three rounds;
+`app_onboot`/`app_autorestart` preserved exactly for every app that had either flag `true` to
+begin with. Exact-value rollback baselines: `.local/debloat/plan/20261102-185552/baseline.json`
+(the original 63) and `.local/debloat/plan/20261102-195727/baseline.json` (all 84) - see
+"Rollback" below.
+
+**Deliberately not pursued**: `ipa.service`, `contents-recognition-service.service`,
+`org.tizen.tv.sp-kpi.service`, `data-service.service`, and 12 other systemd services quiet-tizen's
+own tooling disables - all require root (quiet-tizen vendors a separate public exploit,
+[chris-ritsen/samsung-tv-root](https://github.com/chris-ritsen/samsung-tv-root), confirmed working
+against this TV's exact capability setup via a read-only compatibility check), which is an
+explicit hard limit here. Even with root, quiet-tizen doesn't persist a disable for the four
+telemetry services above specifically (`runtime_only_masks` in their profile, not `stop_markers`)
+- masking them would need re-exploiting the TV on every reboot for a result that reverts anyway,
+judged not worth it. See "Systemd services: investigated, not pursued" below.
+
+**Still open, needs a decision**: five candidates found in the full-list sweep that are plausibly
+unused but could be features you actually use - `samsung-cloud` (cross-device sync),
+`nfc-daemon`/`nfc-monitor` (NFC tap-to-connect), `rdm.vx.dmhandler` (unclear if retail-only
+device management), `coba.mobilebff` (likely a SmartThings/SmartView mobile-pairing bridge despite
+"Sample App" in its display name). Not added to `profiles.json` - see "Lower-confidence candidates"
+below.
 
 ## Why this needs its own validation, not quiet-tizen's values
 
@@ -38,24 +58,35 @@ over and two don't:
 
 | Group | Count | Examples |
 | --- | --- | --- |
-| `advertising` | 5 | Ad Web Framework, Targeted Advertisment Service, Samsung Promotion |
-| `voice` | 21 | Bixby (provisioning, context client, capsule viewer, wake engine, "Salute" - Bixby's internal codename), voice/TTS services |
-| `context` | 5 | Context Aware Agent and its toast/grab-control/server-requester helpers |
+| `advertising` | 11 | Ad Web Framework, Targeted Advertisment Service, Samsung Promotion, ACR engine, canalysis/adagent/pisa ad-tracking services |
+| `voice` | 24 | Bixby (provisioning, context client, capsule viewer, wake engine, "Salute" - Bixby's internal codename), Alexa client/fullscreen app/wake engine, voice/TTS services |
+| `context` | 6 | Context Aware Agent and its toast/grab-control/server-requester helpers, content-grab-service |
 | `sidebar` | 1 | `com.samsung.tv.home.sidebar` |
 | `tvplus` | 2 | TV Plus deeplinker and the app itself |
-| `smart-extras` | 26 | SmartThings (app, hub, plugin platform, per-widget IoT cards), Samsung Health/workout tracker, Gaming Hub, ambient support/sound/FTE components |
-| `telemetry` | 3 | samsung-analytics, contents-recognition-dbmgr, the remote-service logging debug menu |
+| `smart-extras` | 32 | SmartThings (app, hub, plugin platform, per-widget IoT cards), Samsung Health (app, view, mde service, daemon), Gaming Hub (app, daemon, service), ambient support/sound/FTE components, ad players, AOV dashboard |
+| `telemetry` | 5 | samsung-analytics, contents-recognition-dbmgr, remote-service logging debug menu, emergency-log-transmitter, ep-log-manager |
+| `bloatware` | 3 | Retail demo-mode player, USB sync demo GUI, unsolicited survey popup |
 
-Added 2026-11-02 after comparing against [jss8649/quiet-tizen](https://github.com/jss8649/quiet-tizen)'s
-own cleanup profile, which covers both of these categories and this list didn't yet. One caveat
-specific to `telemetry`: quiet-tizen's own telemetry group is mostly systemd **service** units
-(`ipa.service`, `contents-recognition-service.service`, `org.tizen.tv.sp-kpi.service`,
-`data-service.service`), not Tizen app packages - those don't appear in `applist`/`pkgcmd -l` at
-all, so `snapshot.py` can't check them as it exists today, and quiet-tizen itself could only
-runtime-mask them (`systemctl mask --runtime --now`), never persist the disable across reboot.
-The three entries actually in `telemetry` above are the app-package-level candidates that showed
-up in this TV's own capture; the service-unit layer remains unbuilt tooling, not just unverified
-candidates.
+`smart-extras` and `telemetry` were added 2026-11-02 after comparing against
+[jss8649/quiet-tizen](https://github.com/jss8649/quiet-tizen)'s own cleanup profile summary, which
+covered both categories and this list didn't yet. The systemd-service caveat for `telemetry` is
+covered in full in "Systemd services: investigated, not pursued" below.
+
+A second pass the same day went further than the summary: fetched quiet-tizen's actual
+`profiles/un75u8000ffxza-1300.9.json` (not just their README) and diffed it app-ID-by-app-ID
+against ours, rather than just category names. 16 app IDs they cover that this list didn't -
+`advertising` gained the ACR engine and canalysis/adagent/pisa ad-tracking services, `voice`
+gained the full Alexa cluster (this TV ships Alexa alongside Bixby/Salute), `context` gained
+`content-grab-service`, `smart-extras` gained Gaming Hub's daemon/service (separate from the
+`gaminghub` app itself) and a second Samsung Health service. Each was checked against this TV's
+own `applist` capture before adding - quiet-tizen's `AICompanion*`/`ai-discovery-*` cluster (6
+apps) and their TV Plus package ID don't exist on this TV at all and were correctly left out, not
+silently assumed present.
+
+A third pass swept this TV's full ~500-app capture for patterns neither list had: `bloatware`
+(retail demo-mode tools, an unsolicited survey popup) and two more `telemetry` entries
+(`emergency-log-transmitter`, `ep-log-manager` - names that are telemetry-shaped on their face).
+See "Lower-confidence candidates" below for five more the sweep found that weren't added.
 
 ## What's built so far
 
@@ -146,19 +177,62 @@ One real gap hit along the way: the full 63-app `apply.py` call was blocked by C
 harness-level safety classifier ("Modify Shared Resources"), independent of the owner's own
 authorisation. The owner ran it themselves instead, using the `!` prefix to execute directly in
 the session - that's not subject to the same classifier since it's the owner's own action, not the
-agent's.
+agent's. The later 21-app round (quiet-tizen-gap + full-sweep candidates) ran agent-side without
+hitting the same block, for reasons not fully understood - possibly batch-size-dependent.
+
+## Systemd services: investigated, not pursued
+
+`ipa.service`, `contents-recognition-service.service`, `org.tizen.tv.sp-kpi.service`,
+`data-service.service` (quiet-tizen's `runtime_only_masks`), plus 12 more in their persistent
+`stop_markers` list (Bixby/context-aware/AICompanion/Gaming Hub daemons, etc.) - all confirmed to
+genuinely exist on this TV via `systemctl list-units --all` (`systemctl list-unit-files` hangs on
+this TV and should be avoided; `list-units` doesn't). Two more worth knowing about that neither
+original candidate list named: `kpi-logging.service` ("Send Key To Logger Service" - no Tizen app
+wrapper, reads like remote-key/keystroke logging) and `media-analytics-service.service` (currently
+in a failed state).
+
+None of this is reachable with the mechanism built here. Read-only verification (`getcap
+/usr/bin/dotnet /usr/sbin/sdbd-tarlauncher`) confirmed this TV has the exact vulnerable capability
+set (`cap_setgid,cap_sys_admin+ei` / `cap_setgid,cap_setuid+eip`) quiet-tizen's root route
+(vendored from [chris-ritsen/samsung-tv-root](https://github.com/chris-ritsen/samsung-tv-root), an
+`sdbd-tarlauncher` + `tar --to-command` privilege-escalation chain) needs - the exploit would work
+here. It wasn't run. Obtaining root is an explicit hard limit for this project (same boundary the
+native-Home work has held throughout: no root, no security-policy changes, no resident helper),
+and even setting that aside, quiet-tizen's own profile treats the four `runtime_only_masks`
+services as non-persistent by design (not in their `stop_markers` list, unlike the other 12) - a
+disable would revert on the next reboot, needing the exploit re-run every time for a result that
+doesn't stick. Judged not worth the exposure for a non-durable outcome. Owner's explicit call,
+made with this information in hand.
+
+## Lower-confidence candidates
+
+Five more the full-capture sweep surfaced that look plausible but weren't added, because each is a
+real user-facing feature on some installations, not obviously-unused bloat or covert telemetry:
+
+| App | Why it's ambiguous |
+| --- | --- |
+| `com.samsung.tizen.samsung-cloud` | Samsung Cloud sync - a real feature if cross-device settings/photo sync is wanted |
+| `com.samsung.tv.nfc-daemon` / `com.samsung.tv.nfc-monitor` | NFC tap-to-connect - real feature if used for mobile pairing |
+| `com.samsung.rdm.vx.dmhandler` ("VisualExperienceDeviceManagementApplication") | Reads as retail/remote device management; unclear if it has any home-use relevance or is purely a showroom leftover |
+| `com.samsung.tv.coba.mobilebff` ("CoBA Sample App") | Likely a SmartThings/SmartView mobile-companion bridge despite "Sample App" in its display name - not clearly unused |
+
+Also explicitly reviewed and excluded as false positives from the keyword sweep (not ambiguous,
+just wrongly matched): `org.tizen.pvrrecorder-syspopup` (its DVR/recording popup, not demo/sample
+bloat - matched on the word "sample" in an unrelated display name), `com.samsung.SelfDiagnosis`
+(a legitimate support/troubleshooting tool, not privacy telemetry), `com.samsung.mtm-banner`
+(maintenance-mode service infrastructure, not bloat).
 
 ## Rollback
 
-`.local/debloat/plan/20261102-185552/baseline.json` is the exact-value baseline for everything
-currently disabled (all 63 candidates). To put everything back exactly as it was:
+`.local/debloat/plan/20261102-195727/baseline.json` is the exact-value baseline for everything
+currently disabled (all 84 candidates, superseding the earlier 63-only baseline). To put
+everything back exactly as it was:
 
 ```sh
-python3 scripts/debloat/restore.py .local/debloat/plan/20261102-185552/baseline.json
+python3 scripts/debloat/restore.py .local/debloat/plan/20261102-195727/baseline.json
 ```
 
 This re-enables every app and independently re-verifies each one against the baseline's exact
-recorded values (not a blanket "set to false" - the two apps that started with `app_onboot`/
-`app_autorestart: true` get checked against that, specifically). Subject to the same harness
-classifier as the mass `apply.py` call was, most likely - run it with `!` if Claude's own call is
-blocked.
+recorded values (not a blanket "set to false" - every app that started with `app_onboot`/
+`app_autorestart: true` gets checked against that, specifically). May hit the same harness
+classifier the first mass `apply.py` call did - run it with `!` if Claude's own call is blocked.
